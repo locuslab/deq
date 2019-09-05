@@ -277,9 +277,7 @@ def train():
             logging(log_str)
             train_loss = 0
             log_start_time = time.time()
-        
-        if train_step >= 1000:
-            return
+            
 
 # Loop over epochs.
 train_step = args.start_train_steps
