@@ -214,8 +214,8 @@ def evaluate(eval_iter):
             (_, _, output), mems = model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
                                          b_thres=args.b_thres, subseq_len=subseq_len, decode=False)  
             loss = criterion(model.decoder.weight, model.decoder.bias, 
-                             output.contiguous().view(-1, output.size(2)), targets.view(-1))
-            total_loss += seq_len * loss.float().item()
+                             output.contiguous().view(-1, output.size(2)), target.view(-1))
+            total_loss += seq_len * loss.item()
             total_len += seq_len
     
     model.train()
