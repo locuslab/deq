@@ -19,8 +19,9 @@ if [[ $1 == 'train' ]]; then
         --dropatt 0.0 \
         --optim Adam \
         --lr 0.00025 \
-        --warmup_step 16000 \
-        --pretrain_steps 16000 \
+        --warmup_step 20000 \
+        --pretrain_steps 20000 \
+        --eval-interval 7000 \
         --max_step 300000 \
         --tgt_len 150 \
         --mem_len 150 \
@@ -31,6 +32,4 @@ if [[ $1 == 'train' ]]; then
         --multi_gpu \
         ${@:2}
 elif [[ $1 == 'eval' ]]; then
-    echo 'Run evaluation...'
-    python eval.py \
-        --cuda \
+    echo 'Not supported yet'

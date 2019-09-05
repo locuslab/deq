@@ -53,10 +53,8 @@ parser.add_argument('--batch_chunk', type=int, default=1,
 # Sequence logistics
 parser.add_argument('--seq_len', type=int, default=100,
                     help='total sequence length')
-parser.add_argument('--subseq_len', type=int, default=25,
+parser.add_argument('--subseq_len', type=int, default=50,
                     help='length of subsequence processed each time by DEQ')
-parser.add_argument('--repack', action='store_false',
-                    help='use repackaging (default: True)')
 
 # Regularizations
 parser.add_argument('--dropout', type=float, default=0.1,
@@ -85,7 +83,7 @@ parser.add_argument('--anneal', type=int, default=5,
                     help='learning rate annealing criteria (default: 5)')
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='report interval')
-parser.add_argument('--when', nargs='+', type=int, default=[15, 20],
+parser.add_argument('--when', nargs='+', type=int, default=[15, 20, 23],
                     help='When to decay the learning rate')
 parser.add_argument('--ksize', type=int, default=2,
                     help='conv kernel size (default: 2)')

@@ -27,6 +27,13 @@ If you find this repository useful for your research, please consider citing our
 
 Python >= 3.5 and PyTorch >= 1.0.0. 4 GPUs strongly recommended for computational efficiency.
 
+## Data
+
+You can download the dataset using 
+```sh
+bash get_data.sh
+```
+
 ## Usage
 
 All DEQ instantiations share the same underlying framework, whose core functionalities are provided in `DEQModel/modules`. In particular, `deq.py` provides the PyTorch functions that solves for the roots in forward and backward passes (you can also change the value of \epsilon there). `broyden.py` provides an implementation of the Broyden's method. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in `optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).

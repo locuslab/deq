@@ -6,9 +6,9 @@ if [[ $1 == 'train' ]]; then
         --cuda \
         --data ../data/wikitext-103/ \
         --dataset wt103 \
-        --n_layer 100 \
+        --n_layer 40 \
         --d_embed 500 \
-        --nhid 1400 \
+        --nhid 1500 \
         --nout 500 \
         --clip 0.07 \
         --dropout 0.1 \
@@ -19,10 +19,10 @@ if [[ $1 == 'train' ]]; then
         --pretrain_steps 30000 \
         --seq_len 100 \
         --subseq_len 50 \
-        --f_thres 50 \
+        --f_thres 55 \
         --b_thres 70 \
-        --batch_size 55 \
-        --gpu0_bsz 13 \
+        --batch_size 49 \
+        --gpu0_bsz 7 \
         --multi_gpu \
         ${@:2}
 elif [[ $1 == 'eval' ]]; then
