@@ -277,10 +277,11 @@ def train():
             logging(log_str)
             train_loss = 0
             log_start_time = time.time()
-            
+    
 
 # Loop over epochs.
 train_step = args.start_train_steps
+eval_count = 1
 best_val_loss = None
 all_val_losses = []
 
@@ -308,12 +309,13 @@ try:
         logging('-' * 100)
         log_str = '| Eval {:3d} at step {:>8d} | time: {:5.2f}s ' \
                   '| valid loss {:5.2f} | valid ppl {:9.3f}'.format(
-            train_step // args.eval_interval, train_step,
+            eval_count, train_step,
             (time.time() - eval_start_time), val_loss, math.exp(val_loss))
         logging(log_str)
         logging('-' * 100)
         
         eval_start_time = time.time()
+        eval_count += 1
         
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
