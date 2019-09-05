@@ -44,7 +44,7 @@ python train_transformer.py --cuda --multi_gpu --d_embed 600 --d_model 600 --pre
 ```
 
 #### Example Configuration Files
-We also provide some sample scripts that runs on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
+We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
 ```sh
 bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 50 --subseq_len 75
 ```
@@ -60,7 +60,7 @@ The files in this repo are organized in the following manner:
 DEQModel/
   models/
     trellisnets/
-      (2 files, one containing a TrellisNet LM and one containing its forward/backward DEQ operations)
+      (2 files, one containing a TrellisNet LM and one its for-/backward DEQ operations)
     transformers/
       (2 files for similar purposes as above)
   modules/
