@@ -213,7 +213,8 @@ def evaluate(eval_iter):
             # output has dimension (seq_len x bsz x nout)
             (_, _, output), mems = model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
                                          b_thres=args.b_thres, subseq_len=subseq_len, decode=False)  
-            loss = criterion(model.decoder.weight, model.decoder.bias, output.view(-1, output.size(2)), targets.view(-1))
+            loss = criterion(model.decoder.weight, model.decoder.bias, 
+                             output.contiguous().view(-1, output.size(2)), targets.view(-1))
             total_loss += seq_len * loss.float().item()
             total_len += seq_len
     
@@ -276,7 +277,9 @@ def train():
             logging(log_str)
             train_loss = 0
             log_start_time = time.time()
-
+        
+        if train_step >= 1000:
+            return
 
 # Loop over epochs.
 train_step = args.start_train_steps
@@ -304,6 +307,15 @@ try:
     for epoch in itertools.count(start=1):
         train()
         val_loss = evaluate(va_iter)
+        logging('-' * 100)
+        log_str = '| Eval {:3d} at step {:>8d} | time: {:5.2f}s ' \
+                  '| valid loss {:5.2f} | valid ppl {:9.3f}'.format(
+            train_step // args.eval_interval, train_step,
+            (time.time() - eval_start_time), val_loss, math.exp(val_loss))
+        logging(log_str)
+        logging('-' * 100)
+        
+        eval_start_time = time.time()
         
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:

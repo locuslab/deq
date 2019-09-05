@@ -19,8 +19,8 @@ if [[ $1 == 'train' ]]; then
         --pretrain_steps 30000 \
         --seq_len 100 \
         --subseq_len 50 \
-        --f_thres 55 \
-        --b_thres 70 \
+        --f_thres 45 \
+        --b_thres 45 \
         --batch_size 49 \
         --gpu0_bsz 7 \
         --multi_gpu \
