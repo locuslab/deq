@@ -14,14 +14,14 @@ if [[ $1 == 'train' ]]; then
         --d_model 700 \
         --n_head 10 \
         --d_head 70 \
-        --d_inner 45000 \
+        --d_inner 46000 \
         --dropout 0.05 \
         --dropatt 0.0 \
         --optim Adam \
         --lr 0.00025 \
-        --warmup_step 20000 \
-        --pretrain_steps 20000 \
-        --eval-interval 7000 \
+        --warmup_step 16000 \
+        --pretrain_steps 16000 \
+        --eval-interval 5000 \
         --max_step 300000 \
         --tgt_len 150 \
         --mem_len 150 \

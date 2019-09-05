@@ -48,7 +48,7 @@ We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_d
 ```sh
 bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 50 --subseq_len 75
 ```
-You should expect to get a 24 to 25 test-set perplexity with this setting.
+**You should expect to get a 24 to 25 test-set perplexity with this setting.**
 
 The current repo contains the code/config files for the large-scale WikiText-103 language corpus. We will soon add the Penn TreeBank experiment and the copy memory task (which were also used in the paper).
 
@@ -82,6 +82,8 @@ We will also release some pre-trained models in the near future.
 3. For most of the time, pre-training the model with a very shallow network (e.g., a 2-layer network) for a while (e.g., 10-20% of the total training steps/epochs) can be helpful, as it makes f_\theta more stable. However, note that these shallow networks themselves usually achieve very bad results on their own (e.g., imagine a 10-layer TrellisNet).
 
 4. Patience. As the paper discusses, DEQ models could be slower than the corresponding deep networks :P
+
+5. Variational dropout typically makes equilibrium states harder to find. However, empirically, we find them to be extremely useful regularizations to these weight-tied models.
 
 (More to come)
 
