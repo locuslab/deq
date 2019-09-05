@@ -1,0 +1,15 @@
+*.pyc
+*.so
+*.log
+*.data
+data/
+*.pkl
+.DS_Store/
+__pycache__/
+*.pt
+.idea/
+LM*/
+copy_memory/
+submissions/
+models/graphtransformers
+Mess/
