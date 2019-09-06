@@ -33,3 +33,6 @@ if [[ $1 == 'train' ]]; then
         ${@:2}
 elif [[ $1 == 'eval' ]]; then
     echo 'Not supported yet'
+else
+    echo 'unknown argment 1'
+fi
