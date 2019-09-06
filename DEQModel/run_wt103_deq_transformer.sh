@@ -14,7 +14,7 @@ if [[ $1 == 'train' ]]; then
         --d_model 700 \
         --n_head 10 \
         --d_head 70 \
-        --d_inner 46000 \
+        --d_inner 48000 \
         --dropout 0.05 \
         --dropatt 0.0 \
         --optim Adam \
@@ -26,6 +26,9 @@ if [[ $1 == 'train' ]]; then
         --tgt_len 150 \
         --mem_len 150 \
         --eval_tgt_len 150 \
+        --wnorm \
+        --f_thres 30 \
+        --b_thres 40 \
         --subseq_len 75 \
         --batch_size 56 \
         --gpu0_bsz 14 \
