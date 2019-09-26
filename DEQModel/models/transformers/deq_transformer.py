@@ -135,7 +135,7 @@ class WeightShareSelfAttention(nn.Module):
 
         if self.pre_lnorm:
             cat = F.layer_norm(cat.transpose(1,2), (d_model,)).transpose(1,2)
-        w_heads = self.qkv_net(cat)      # (N, 3C, L)
+        w_heads = self.qkv_net(cat)      # (N x 3*d_model x seq_len)
         r_head_k = self.r_net(pos_emb)
 
         # Input injection
@@ -151,17 +151,17 @@ class WeightShareSelfAttention(nn.Module):
 
         r_head_k = r_head_k.view(n_head, d_head, rlen)                # n_head x d_head x rlen
 
-        #### compute attention score
+        # Compute attention score
         rw_head_q = w_head_q + r_w_bias[:,:,None]                   # bsz x n_head x d_head x qlen
         AC = torch.einsum('bndi,bndj->bnij', rw_head_q, w_head_k)
         rr_head_q = w_head_q + r_r_bias[:,:,None]
         BD = torch.einsum('bndi,ndj->bnij', rr_head_q, r_head_k)
-        BD = self._rel_shift(BD)    # for the sake of relative positional embedding
+        BD = self._rel_shift(BD)    # for relative positional embedding
 
         attn_score = AC + BD        # bsz x n_head x qlen x klen
         attn_score.mul_(self.scale)
             
-        #### compute attention probability
+        # Compute attention probability
         # We apply a local mask, with local horizon size of mlen
         local_size = self.local_size or 1000
         attn_mask = torch.triu(torch.ones(qlen, klen), diagonal=1+mlen).byte()[None,:,:]
@@ -172,17 +172,17 @@ class WeightShareSelfAttention(nn.Module):
                 
         attn_prob = F.softmax(attn_score, dim=-1)          # bsz x n_head x qlen x klen
             
-        #### compute attention vector
+        # Compute attention vector
         attn_vec = torch.einsum('bnij,bndj->bndi', (attn_prob, w_head_v))
         
         # [bsz x d x qlen]
         attn_vec = attn_vec.contiguous().view(bsz, n_head*d_head, attn_vec.size(-1))
 
-        ##### linear projection
+        # Linear projection
         attn_out = self.o_net(attn_vec)
         attn_out = self.drop(attn_out)
         
-        ##### residual connection + layer normolization (if applicable)
+        # Residual connection + layer normolization (if applicable)
         if self.pre_lnorm:
             out = attn_out + z1ss
         else:

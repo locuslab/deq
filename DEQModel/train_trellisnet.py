@@ -36,7 +36,7 @@ parser.add_argument('--epochs', type=int, default=25,
                     help='upper epoch limit (default: 25)')
 
 # Optimizers
-parser.add_argument('--optim', default='adam', type=str,
+parser.add_argument('--optim', default='Adam', type=str,
                     choices=['Adam', 'SGD', 'Adagrad', 'RMSprop', 'RAdam'],
                     help='optimizer to use.')
 parser.add_argument('--lr', type=float, default=1e-3,
@@ -258,7 +258,7 @@ def train():
             (_, _, output), mems = para_model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
                                               b_thres=args.b_thres, subseq_len=subseq_len, decode=False)
             loss = criterion(model.decoder.weight, model.decoder.bias, 
-                             output.view(-1, output.size(2)), target.view(-1))
+                             output.reshape(-1, output.size(2)), target.view(-1))
             loss.backward()
             train_loss += loss.item()
             

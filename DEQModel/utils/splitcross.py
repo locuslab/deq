@@ -82,7 +82,7 @@ class SplitCrossEntropyLoss(nn.Module):
         # This is equally fast for smaller splits as method below but scales linearly
         mask = None
         for idx in range(1, self.nsplits):
-            partial_mask = targets >= self.splits[idx]
+            partial_mask = (targets >= self.splits[idx]).type(torch.uint8)
             mask = mask + partial_mask if mask is not None else partial_mask
         ###
         for idx in range(self.nsplits):
