@@ -6,7 +6,7 @@ Unlike many existing "deep" techniques, the DEQ model is a implicit-depth archit
 backpropagates through the equilibrium state of an (effectively) infinitely deep network. Importantly, compared to 
 prior implicit-depth approaches (e.g., ODE-based methods), in this work we also demonstrate the potential power and 
 applicability of such models on practical, large-scale and high-dimensional sequence datasets. On these large-scale 
-datasets, (carefully designed) DEQ models can acheive results on par with (or even slightly better than) the SOTA 
+datasets, (carefully designed) DEQ models can acheive results on par with (or slightly better than) the SOTA 
 deep networks, while not using a "deep" stacking (and with only O(1) memory). 
 
 We provide two instantiations of DEQ here, based primarily on two SOTA sequence models: 1) universal transformers; 
@@ -25,7 +25,7 @@ If you find this repository useful for your research, please consider citing our
 
 ## Prerequisite
 
-Python >= 3.5 and PyTorch >= 1.0.0. 4 GPUs strongly recommended for computational efficiency.
+Python >= 3.5 and PyTorch >= 1.0.0. 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
 
 ## Data
 
@@ -46,9 +46,9 @@ python train_transformer.py --cuda --multi_gpu --d_embed 600 --d_model 600 --pre
 #### Example Configuration Files
 We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
 ```sh
-bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 50 --subseq_len 75
+bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40 --subseq_len 75
 ```
-**You should expect to get a 24 to 24.5 test-set perplexity with this setting.**
+**You should expect to get a test-set perplexity around 24 with this setting.**
 
 The current repo contains the code/config files for the large-scale WikiText-103 language corpus. We will soon add the Penn TreeBank experiment and the copy memory task (which were also used in the paper).
 
@@ -71,13 +71,26 @@ DEQModel/
      (All logs of the training, where [...] is the architecture type)
 ```
 
-We will also release some pre-trained models in the near future.
+#### Pre-trained Models
+
+We provide some reasonably good pre-trained weights here so that one can quickly play with DEQs without training from scratch.
+
+| Description   | Task              | Dataset             | Model                                      | Expected Performance    |
+| ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
+| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/17z9_rgqMRnrgIkIbJ4PvOsDblUVZulVi/view?usp=sharing) |   23.4 Perplexity   |
+(more to come)
+
+To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the provided pretrained DEQ-Transformer on WT103 as an example (with the default parameters), which you should expect to get a 23.4 ppl:
+
+```
+bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --subseq_len 150 --pretrain_step 0
+```
 
 ## Tips
 
 1. It is not easy to train a DEQ without knowing which hyperparameters you need to pay special attention to. Generally, the importance of these hyperparameters depend on the transformation f_\theta you choose for the architecture. For instance, each layer of the Transformer has a *much* larger receptive field than that of a TrellisNet, so we have observed that TrellisNet typically requires more Broyden steps to converge to the equilibrium (which means the Broyden iteration limit is typically larger).
 
-2. Empirically, we find that training with subsequences makes the equilibrium solving process more stable (especially when dealing with extremely long sequences). See the appendix in the paper for more details.
+2. Empirically, we find that training with subsequences makes the equilibrium solving process slightly more stable (especially when dealing with extremely long sequences). See the appendix in the paper for more details.
 
 3. For most of the time, pre-training the model with a very shallow network (e.g., a 2-layer network) for a while (e.g., 10-20% of the total training steps/epochs) can be helpful, as it makes f_\theta more stable. However, note that these shallow networks themselves usually achieve very bad results on their own (e.g., imagine a 10-layer TrellisNet).
 
@@ -85,7 +98,7 @@ We will also release some pre-trained models in the near future.
 
 5. Variational dropout typically makes equilibrium states harder to find. However, empirically, we find them to be extremely useful regularizations to these weight-tied models.
 
-(More to come)
+6. You can vary factors such as `--mem_len` (for DEQ-Transformer) and `--f_thres` at inference time. As we show in the paper, more Broyden steps typically yields (diminishingly) better results. Moreover, as DEQ only has "one layer", storage cost of the cached history sequence of size `--mem_len` is actually very cheap.
 
 
 ## Credits

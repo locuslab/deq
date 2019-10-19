@@ -345,7 +345,7 @@ def evaluate(eval_iter):
         for i, (data, target, seq_len) in enumerate(eval_iter):
             if 0 < args.max_eval_steps <= i:
                 break
-            ret = model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
+            ret = para_model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
                         b_thres=args.b_thres, subseq_len=subseq_len)
             loss, mems = ret[0], ret[1:]
             loss = loss.mean()
@@ -467,6 +467,7 @@ log_start_time = time.time()
 eval_start_time = time.time()
 
 if args.eval:
+    train_step = 1e9
     epoch = -1
     valid_loss = evaluate(va_iter)
     logging('=' * 100)
