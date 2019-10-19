@@ -78,6 +78,7 @@ We provide some reasonably good pre-trained weights here so that one can quickly
 | Description   | Task              | Dataset             | Model                                      | Expected Performance    |
 | ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
 | DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/17z9_rgqMRnrgIkIbJ4PvOsDblUVZulVi/view?usp=sharing) |   23.4 Perplexity   |
+
 (more to come)
 
 To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the provided pretrained DEQ-Transformer on WT103 as an example (with the default parameters), which you should expect to get a 23.4 ppl:
