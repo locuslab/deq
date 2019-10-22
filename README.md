@@ -10,8 +10,10 @@ datasets, (carefully designed) DEQ models can acheive results on par with (or sl
 deep networks, while not using a "deep" stacking (and with only O(1) memory). 
 
 We provide two instantiations of DEQ here, based primarily on two SOTA sequence models: 1) universal transformers; 
-and 2) trellis networks. But importantly, we have separated out a framework so that it requires minimal effort to 
-try other interesting architectures/transformations. See the README in `DEQModel/models` for more details.
+and 2) trellis networks. More importantly, we have separated out a framework so that it requires minimal effort to 
+try other interesting architectures/transformations beyond these two instantiations. See the README in `DEQModel/models` for more details.
+
+We also provide below URLs to the saved pre-trained models that achieve the state-of-the-art performance (e.g., 23.2 ppl on WT103).
 
 If you find this repository useful for your research, please consider citing our work:
 ```
@@ -48,7 +50,7 @@ We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_d
 ```sh
 bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40 --subseq_len 75
 ```
-**You should expect to get a test-set perplexity around 24 with this setting.**
+**You should expect to get a test-set perplexity around 23.9 with this setting.**
 
 The current repo contains the code/config files for the large-scale WikiText-103 language corpus. We will soon add the Penn TreeBank experiment and the copy memory task (which were also used in the paper).
 
@@ -77,15 +79,16 @@ We provide some reasonably good pre-trained weights here so that one can quickly
 
 | Description   | Task              | Dataset             | Model                                      | Expected Performance    |
 | ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
-| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/17z9_rgqMRnrgIkIbJ4PvOsDblUVZulVi/view?usp=sharing) |   23.4 Perplexity   |
+| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/17z9_rgqMRnrgIkIbJ4PvOsDblUVZulVi/view?usp=sharing) |   23.2 Perplexity   |
 
 (more to come)
 
-To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the provided pretrained DEQ-Transformer on WT103 as an example (with the default parameters), which you should expect to get a 23.4 ppl:
+To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.2 ppl (outperforming Transformer-XL's 23.6 ppl):
 
 ```
-bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --subseq_len 150 --pretrain_step 0
+bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --subseq_len 75 --eval_tgt_len 75 --pretrain_step 0
 ```
+(i.e., at inference time, set the augmented memory size to 300, and perform equilibrium solving on a sequence of length 75 each time (which you can adjust).)
 
 ## Tips
 
