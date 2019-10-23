@@ -164,11 +164,11 @@ class WeightShareSelfAttention(nn.Module):
         # Compute attention probability
         # We apply a local mask, with local horizon size of mlen
         local_size = self.local_size or 1000
-        attn_mask = torch.triu(torch.ones(qlen, klen), diagonal=1+mlen).byte()[None,:,:]
-        attn_mask += torch.tril(torch.ones(qlen, klen), diagonal=mlen-local_size).byte()[None,:,:]
+        attn_mask = (torch.triu(torch.ones(qlen, klen), diagonal=1+mlen) > 0)[None]
+        attn_mask += (torch.tril(torch.ones(qlen, klen), diagonal=mlen-local_size) > 0)[None]
         if attn_mask is not None and attn_mask.any().item():
             attn_score = attn_score.float().masked_fill(
-                    attn_mask[None,:,:,:], -float('inf')).type_as(attn_score)
+                    attn_mask[None], -float('inf')).type_as(attn_score)
                 
         attn_prob = F.softmax(attn_score, dim=-1)          # bsz x n_head x qlen x klen
             

@@ -27,7 +27,7 @@ If you find this repository useful for your research, please consider citing our
 
 ## Prerequisite
 
-Python >= 3.5 and PyTorch >= 1.0.0. 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
+Python >= 3.5 and PyTorch >= 1.0.0 (note: v1.3.0 verified in 2019/10). 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
 
 ## Data
 
