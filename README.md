@@ -25,9 +25,13 @@ If you find this repository useful for your research, please consider citing our
 }
 ```
 
+## News
+
+2020/2: Following the suggestions of many researchers, we have made a major update to the repo that significantly clarifies implementation structure of DEQ. Unlike the previous version (where `DEQFunc` and `DummyDEQFunc` could be confusing), both the forward and backward functionalities of DEQ are wrapped in the `DEQModule` class in file `module/deq.py`.
+
 ## Prerequisite
 
-Python >= 3.5 and PyTorch >= 1.0.0 (note: v1.3.0 verified in 2019/10). 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
+Python >= 3.5 and PyTorch >= 1.3.0. 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
 
 ## Data
 
@@ -75,20 +79,8 @@ DEQModel/
 
 #### Pre-trained Models
 
-We provide some reasonably good pre-trained weights here so that one can quickly play with DEQs without training from scratch.
+We will upload a new pre-trained model that is trained under the updated framework soon.
 
-| Description   | Task              | Dataset             | Model                                      | Expected Performance    |
-| ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
-| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/17z9_rgqMRnrgIkIbJ4PvOsDblUVZulVi/view?usp=sharing) |   23.2 Perplexity   |
-
-(more to come)
-
-To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.2 ppl (outperforming Transformer-XL's 23.6 ppl):
-
-```
-bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --subseq_len 75 --eval_tgt_len 75 --pretrain_step 0
-```
-(i.e., at inference time, set the augmented memory size to 300, and perform equilibrium solving on a sequence of length 75 each time (which you can adjust).)
 
 ## Tips
 
