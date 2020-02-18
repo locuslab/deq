@@ -25,9 +25,13 @@ If you find this repository useful for your research, please consider citing our
 }
 ```
 
+## News
+
+2020/2: A simpler implementation of the DEQ framework is now available in the `beta` branch of this repo (we'll upload a pre-trained model very soon). This new version significantly simplifies the (confusing) structures in `deq.py` and `deq_[MODEL_NAME]_forward_backward.py` files, and makes it a lot easier to play with DEQs!
+
 ## Prerequisite
 
-Python >= 3.5 and PyTorch >= 1.0.0 (note: v1.3.0 verified in 2019/10). 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
+Python >= 3.5 and PyTorch >= 1.3.0. 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
 
 ## Data
 
