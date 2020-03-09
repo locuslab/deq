@@ -46,10 +46,7 @@ All DEQ instantiations share the same underlying framework, whose core functiona
 backward pass is hidden as an inner class of `DEQModule`**. `broyden.py` provides an implementation of the Broyden's method. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in 
 `optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).
 
-Training and evaluation scripts of DEQ-Transformer and DEQ-TrellisNet are provided independently, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags. For instance:
-```sh
-python train_transformer.py --cuda --multi_gpu --d_embed 600 --d_model 600 --pretrain_steps 20000 [...]
-```
+Training and evaluation scripts of DEQ-Transformer and DEQ-TrellisNet are provided independently, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags.
 
 #### Example Configuration Files
 We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
@@ -87,14 +84,12 @@ We provide some reasonably good pre-trained weights here so that one can quickly
 | ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
 | DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1I0q6f8-XFAEDqv-Zwi5Mxc9WtwmJT3sw/view?usp=sharing) |   23.1 Perplexity   |
 
-(more to come)
-
-To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.2 ppl (outperforming Transformer-XL's 23.6 ppl):
+To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.21ppl (outperforming Transformer-XL's 23.6 ppl):
 
 ```
 bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --pretrain_step 0
 ```
-(i.e., at inference time, set the augmented memory size to 300, and perform equilibrium solving on a sequence of length 75 each time (which you can adjust).)
+(i.e., at inference time, set the augmented memory size to 300 (which you can adjust).)
 
 
 ## Tips
