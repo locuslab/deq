@@ -42,7 +42,9 @@ bash get_data.sh
 
 ## Usage
 
-All DEQ instantiations share the same underlying framework, whose core functionalities are provided in `DEQModel/modules`. In particular, `deq.py` provides the PyTorch functions that solves for the roots in forward and backward passes (you can also change the value of \epsilon there). `broyden.py` provides an implementation of the Broyden's method. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in `optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).
+All DEQ instantiations share the same underlying framework, whose core functionalities are provided in `DEQModel/modules`. In particular, `deq.py` provides the PyTorch functions that solves for the roots in forward and backward passes, **where the 
+backward pass is hidden as an inner class of `DEQModule`**. `broyden.py` provides an implementation of the Broyden's method. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in 
+`optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).
 
 Training and evaluation scripts of DEQ-Transformer and DEQ-TrellisNet are provided independently, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags. For instance:
 ```sh
@@ -54,7 +56,7 @@ We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_d
 ```sh
 bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40 --subseq_len 75
 ```
-**You should expect to get a test-set perplexity around 23.9 with this setting.**
+**You should expect to get a test-set perplexity around 23.8 with this setting.**
 
 The current repo contains the code/config files for the large-scale WikiText-103 language corpus. We will soon add the Penn TreeBank experiment and the copy memory task (which were also used in the paper).
 
@@ -79,7 +81,20 @@ DEQModel/
 
 #### Pre-trained Models
 
-We will upload a new pre-trained model that is trained under the updated framework soon.
+We provide some reasonably good pre-trained weights here so that one can quickly play with DEQs without training from scratch.
+
+| Description   | Task              | Dataset             | Model                                      | Expected Performance    |
+| ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
+| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1I0q6f8-XFAEDqv-Zwi5Mxc9WtwmJT3sw/view?usp=sharing) |   23.1 Perplexity   |
+
+(more to come)
+
+To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.2 ppl (outperforming Transformer-XL's 23.6 ppl):
+
+```
+bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --pretrain_step 0
+```
+(i.e., at inference time, set the augmented memory size to 300, and perform equilibrium solving on a sequence of length 75 each time (which you can adjust).)
 
 
 ## Tips
