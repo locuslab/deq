@@ -11,9 +11,7 @@ deep networks, while not using a "deep" stacking (and with only O(1) memory).
 
 We provide two instantiations of DEQ here, based primarily on two SOTA sequence models: 1) universal transformers; 
 and 2) trellis networks. More importantly, we have separated out a framework so that it requires minimal effort to 
-try other interesting architectures/transformations beyond these two instantiations. See the README in `DEQModel/models` for more details.
-
-We also provide below URLs to the saved pre-trained models that achieve the state-of-the-art performance (e.g., 23.2 ppl on WT103).
+try other interesting architectures/transformations beyond these two instantiations. See the README in `DEQModel/models` for more details. We also provide below URLs to the saved pre-trained models that achieve the state-of-the-art performance (e.g., 23.1 ppl on WT103).
 
 If you find this repository useful for your research, please consider citing our work:
 ```
@@ -84,7 +82,7 @@ We provide some reasonably good pre-trained weights here so that one can quickly
 | ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
 | DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1I0q6f8-XFAEDqv-Zwi5Mxc9WtwmJT3sw/view?usp=sharing) |   23.1 Perplexity   |
 
-To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.21ppl (outperforming Transformer-XL's 23.6 ppl):
+To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.1ppl (outperforming Transformer-XL's 23.6 ppl):
 
 ```
 bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --pretrain_step 0
