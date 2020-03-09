@@ -11,5 +11,7 @@ __pycache__/
 LM*/
 copy_memory/
 submissions/
-models/graphtransformers
 Mess/
+.ipynb_checkpoint/
+*.ipynb
+runs/

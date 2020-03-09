@@ -14,8 +14,15 @@ We provide two instantiations of DEQs in this directory:
 To create and play with new DEQs, we recommend following the same implementation structure, by creating the following 
 two files: 
   1. `models/[MODEL_NAME]/deq_[MODEL_NAME].py` (which contains the definition of f_\theta); and 
-  2. `models/[MODEL_NAME]/deq_[MODEL_NAME]_forward_backward.py` (which implements the `DEQForward` and `DEQBackward` interface
-and invokes `DEQFunc`/`DummyDEQFunc` that solves for equilibrium states and backprop through them)
+  2. `models/[MODEL_NAME]/deq_[MODEL_NAME]_module.py` (which implements the `DEQModule` interface that provides both forward equilibrium solving and backward implicit differentiation).
+  
+Specifically, when using the DEQ network (e.g., a DEQ-Transformer), all one needs to do are:
+```py
+func = TransformerLayer(...)                    # Initialize a layer f_\theta
+deq = TransformerDEQModule(func, func_copy)     # Instantiate a `DEQModule` object
+...
+output = deq(z, ...)                            # Call the DEQ module on input z
+```
 
 The default parameters to pass into the forward/backward methods only include `z1s` (hidden sequence), 
 `us` (input sequence, or some transformation of it), and `z0` (history padding to append to the left of `z1s`). Graphically:

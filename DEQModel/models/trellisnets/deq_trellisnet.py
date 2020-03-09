@@ -7,7 +7,7 @@ import copy
 
 sys.path.append('../../')
 from modules.optimizations import *
-from models.trellisnets.deq_trellisnet_forward_backward import TrellisNetDEQForward, TrellisNetDEQBackward
+from models.trellisnets.deq_trellisnet_module import TrellisNetDEQModule
 from utils.proj_adaptive_softmax import ProjectedAdaptiveLogSoftmax
 
 __author__ = "shaojieb"
@@ -201,8 +201,7 @@ class DEQTrellisNet(nn.Module):
         for params in self.func_copy.parameters():
             params.requires_grad_(False)  # Turn off autograd for func_copy
 
-        self.deq = TrellisNetDEQForward(self.func)
-        self.deqback = TrellisNetDEQBackward(self.func, self.func_copy)
+        self.deq = TrellisNetDEQModule(self.func, self.func_copy)
 
     def wnorm(self):
         # Apply weight normalization on both the injection layer and the temporal convolution
@@ -258,8 +257,6 @@ class DEQTrellisNet(nn.Module):
                 z1s = self.func(z1s, us, z0)
         else:
             z1s = self.deq(z1s, us, z0, threshold=f_thres, train_step=train_step, subseq_len=subseq_len)
-            if self.training:
-                z1s = self.deqback(z1s, us, z0, threshold=b_thres, train_step=train_step, subseq_len=subseq_len)
         out = self.get_output(z1s).transpose(1, 2)   # Dimension (bsz x seq_len x n_out)
         z0 = self.get_history(z1s)                   # Dimension (bsz x total_hsize x 1)
 

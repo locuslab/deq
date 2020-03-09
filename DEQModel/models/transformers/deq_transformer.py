@@ -8,7 +8,7 @@ sys.path.append('../../')
 
 from modules.optimizations import weight_norm, VariationalDropout, VariationalHidDropout, VariationalAttnDropout
 
-from models.transformers.deq_transformer_forward_backward import TransformerDEQForward, TransformerDEQBackward
+from models.transformers.deq_transformer_module import TransformerDEQModule
 
 from utils.adaptive_embedding import AdaptiveEmbedding
 from utils.positional_embedding import PositionalEmbedding
@@ -260,8 +260,7 @@ class DEQTransformerLM(nn.Module):
             self.func.wnorm()
         for params in self.func_copy.parameters():
             params.requires_grad_(False)                 # Turn off autograd for func_copy
-        self.deq = TransformerDEQForward(self.func)
-        self.deqback = TransformerDEQBackward(self.func, self.func_copy)
+        self.deq = TransformerDEQModule(self.func, self.func_copy)
 
         # use adaptive softmax (including standard softmax)
         # (Note: To use sample softmax, refer to the Transformer-XL implementation)
@@ -370,8 +369,6 @@ class DEQTransformerLM(nn.Module):
             # Compute the equilibrium via DEQ. When in training mode, we need to register the analytical backward
             # pass according to the Theorem 1 in the paper.
             z1s = self.deq(z1s, us, z0, pos_emb=pos_emb, subseq_len=subseq_len, threshold=f_thres, train_step=train_step)
-            if self.training:
-                z1s = self.deqback(z1s, us, z0, pos_emb=pos_emb, subseq_len=subseq_len, threshold=b_thres, train_step=train_step)
                     
         core_out = self.iodrop(z1s, self.dropout)
         core_out = core_out.permute(2,0,1).contiguous()       # qlen x bsz x d_model
@@ -405,7 +402,7 @@ class DEQTransformerLM(nn.Module):
                                          f_thres=f_thres, b_thres=b_thres, train_step=train_step)
         
         pred_hid = hidden[-tgt_len:]
-        loss = self.crit(pred_hid.view(-1, pred_hid.size(-1)), target.view(-1))
+        loss = self.crit(pred_hid.contiguous().view(-1, pred_hid.size(-1)), target.contiguous().view(-1))
         loss = loss.view(tgt_len, -1)
 
         if new_mems is None:
