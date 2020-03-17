@@ -8,7 +8,6 @@ import sys
 import os
 from scipy.optimize import root
 import time
-from termcolor import colored
 import copy
 from modules.broyden import broyden, analyze_broyden
 
@@ -33,11 +32,6 @@ class RootFind(Function):
         g = lambda x: RootFind.g(func, x, uss, z0, *args)
         result_info = broyden(g, z1ss_est, threshold=threshold, eps=eps, name="forward")
         z1ss_est = result_info['result']
-        nstep = result_info['nstep']
-        
-        if z1ss_est.get_device() == 0 and np.random.uniform(0, 1) < 1e-4:
-            msg = f"{nstep} steps in Broyden forward: diff={result_info['diff']}; eps={eps}; bsz={bsz}"
-            print(colored(msg, "cyan"))
             
         if threshold > 100:
             torch.cuda.empty_cache()
@@ -123,11 +117,6 @@ class DEQModule(nn.Module):
 
             result_info = broyden(g, dl_df_est, threshold=threshold, eps=eps, name="backward")
             dl_df_est = result_info['result']
-            nstep = result_info['nstep']
-            
-            if dl_df_est.get_device() == 0 and np.random.uniform(0, 1) < 1e-4:
-                msg = f"{nstep} steps in Broyden backward: diff={result_info['diff']}; eps={eps}; bsz={bsz}"
-                print(colored(msg, "yellow"))
             
             y.backward(torch.zeros_like(dl_df_est), retain_graph=False)
 
