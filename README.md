@@ -1,5 +1,7 @@
 # Deep Equilibrium Models
 
+**2020/5: The current version is not yet compatible with PyTorch 1.5 due to some issues with parameter replica in `DataParallel` (which has also affected some other transformer repos; see Issue [#3936](https://github.com/huggingface/transformers/issues/3936)). I will update the repo accordingly once this is fixed. For now, to run DEQ, PLEASE USE PyTorch <1.5.0.**
+
 This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
 
 Unlike many existing "deep" techniques, the DEQ model is a implicit-depth architecture that directly solves for and
