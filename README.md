@@ -25,7 +25,7 @@ If you find this repository useful for your research, please consider citing our
 
 ## News
 
-2020/2: Following the suggestions of many researchers, we have made a major update to the repo that significantly clarifies implementation structure of DEQ. Unlike the previous version (where `DEQFunc` and `DummyDEQFunc` could be confusing), both the forward and backward functionalities of DEQ are wrapped in the `DEQModule` class in file `module/deq.py`.
+2020/7: This branch is newly created to resolve the DataParallel issue with PyTorch 1.5 (see [here](https://github.com/pytorch/pytorch/issues/40457) and [here](https://github.com/huggingface/transformers/pull/4300) for details). Specifically, this is not a DEQ-related issue, but one related to some of the modules DEQ depends on (e.g., adaptive embedding). In PyTorch 1.5, accessing parameters on the replicas is no longer possible.
 
 ## Prerequisite
 
@@ -76,18 +76,7 @@ DEQModel/
 
 #### Pre-trained Models
 
-We provide some reasonably good pre-trained weights here so that one can quickly play with DEQs without training from scratch.
-
-| Description   | Task              | Dataset             | Model                                      | Expected Performance    |
-| ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
-| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1I0q6f8-XFAEDqv-Zwi5Mxc9WtwmJT3sw/view?usp=sharing) |   23.1 Perplexity   |
-
-To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.1ppl (outperforming Transformer-XL's 23.6 ppl):
-
-```
-bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --pretrain_step 0
-```
-(i.e., at inference time, set the augmented memory size to 300 (which you can adjust).)
+Since the PyTorch 1.5 code change, we have not yet re-trained the DEQ model. However, we will make it available as soon as possible. For now, to run pre-trained models, please use PyTorch <1.5 and follow the instructions in the `master` branch.
 
 
 ## Tips
