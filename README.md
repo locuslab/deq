@@ -27,6 +27,8 @@ If you find this repository useful for your research, please consider citing our
 
 ## News
 
+2020/7: A branch `pytorch-1.5` has been created to resolve the DataParallel issue with PyTorch 1.5 (see [here](https://github.com/pytorch/pytorch/issues/40457) and [here](https://github.com/huggingface/transformers/pull/4300) for details). Specifically, this is not a DEQ-related issue, but one related to some of the modules DEQ depends on (e.g., adaptive embedding). In PyTorch 1.5, accessing parameters on the replicas is no longer possible. For now, you can use the `pytorch-1.5` to train the model from scratch, but there is no pre-trained model yet following the code change. To run pre-trained models, please still use PyTorch 1.4 and this `master` branch.
+
 2020/2: Following the suggestions of many researchers, we have made a major update to the repo that significantly clarifies implementation structure of DEQ. Unlike the previous version (where `DEQFunc` and `DummyDEQFunc` could be confusing), both the forward and backward functionalities of DEQ are wrapped in the `DEQModule` class in file `module/deq.py`.
 
 ## Prerequisite
