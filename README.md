@@ -1,6 +1,6 @@
 # Deep Equilibrium Models
 
-**2020/5: The current version is not yet compatible with PyTorch 1.5 due to some issues with parameter replica in `DataParallel` (which has also affected some other transformer repos; see Issue [#3936](https://github.com/huggingface/transformers/issues/3936)). I will update the repo accordingly once this is fixed. For now, to run DEQ, PLEASE USE PyTorch <1.5.0.**
+**2020/5: 2020/7: A branch `pytorch-1.5` has been created to resolve the DataParallel issue with PyTorch 1.5 (see [here](https://github.com/pytorch/pytorch/issues/40457) and [here](https://github.com/huggingface/transformers/pull/4300) for details). Specifically, this is not a DEQ-related issue, but one related to some of the modules DEQ depends on (e.g., adaptive embedding). In PyTorch 1.5, accessing parameters on the replicas is no longer possible. For now, you can use the `pytorch-1.5` to train the model from scratch, but there is no pre-trained model yet following the code change. To run pre-trained models, please still use PyTorch 1.4 and this `master` branch.**
 
 This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
 
@@ -26,8 +26,6 @@ If you find this repository useful for your research, please consider citing our
 ```
 
 ## News
-
-2020/7: A branch `pytorch-1.5` has been created to resolve the DataParallel issue with PyTorch 1.5 (see [here](https://github.com/pytorch/pytorch/issues/40457) and [here](https://github.com/huggingface/transformers/pull/4300) for details). Specifically, this is not a DEQ-related issue, but one related to some of the modules DEQ depends on (e.g., adaptive embedding). In PyTorch 1.5, accessing parameters on the replicas is no longer possible. For now, you can use the `pytorch-1.5` to train the model from scratch, but there is no pre-trained model yet following the code change. To run pre-trained models, please still use PyTorch 1.4 and this `master` branch.
 
 2020/2: Following the suggestions of many researchers, we have made a major update to the repo that significantly clarifies implementation structure of DEQ. Unlike the previous version (where `DEQFunc` and `DummyDEQFunc` could be confusing), both the forward and backward functionalities of DEQ are wrapped in the `DEQModule` class in file `module/deq.py`.
 
