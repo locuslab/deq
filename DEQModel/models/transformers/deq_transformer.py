@@ -273,9 +273,9 @@ class DEQTransformerLM(nn.Module):
         if tie_projs:
             for i, tie_proj in enumerate(tie_projs):
                 if tie_proj and div_val == 1 and d_model != d_embed:
-                    self.crit.out_projs[i] = self.word_emb.emb_projs[0]
+                    self.crit.out_projs[i].weight.data = self.word_emb.emb_projs[0].weight.data
                 elif tie_proj and div_val != 1:
-                    self.crit.out_projs[i] = self.word_emb.emb_projs[i]
+                    self.crit.out_projs[i].weight.data = self.word_emb.emb_projs[i].weight.data
 
         if len(load) > 0:
             params_dict = torch.load(load)
@@ -301,9 +301,7 @@ class DEQTransformerLM(nn.Module):
 
         # mems is not None
         with torch.no_grad():
-            param = next(self.parameters()) 
-            mems = [torch.empty(0, dtype=param.dtype, device=param.device),
-                    torch.empty(0, dtype=param.dtype, device=param.device)]
+            mems = [torch.empty(0), torch.empty(0)]
             return mems       # For z0 and u0
             
     def _update_mems(self, z1s, us, z0, qlen, mlen):
@@ -380,6 +378,9 @@ class DEQTransformerLM(nn.Module):
         # So, have to initialize size(0) mems inside the model forward.
         # Moreover, have to return new_mems to allow nn.DataParallel to piece
         # them together.
+        if data.get_device() == 0:
+            for i in range(1, 4):
+                assert (self.crit.out_projs[i].weight.data == self.word_emb.emb_projs[i].weight.data).all(), "WARNING"
         if not mems: 
             mems = self.init_mems()
         else:
@@ -402,7 +403,7 @@ class DEQTransformerLM(nn.Module):
                                          f_thres=f_thres, b_thres=b_thres, train_step=train_step)
         
         pred_hid = hidden[-tgt_len:]
-        loss = self.crit(pred_hid.contiguous().view(-1, pred_hid.size(-1)), target.contiguous().view(-1))
+        loss = self.crit(pred_hid.view(-1, pred_hid.size(-1)), target.contiguous().view(-1))
         loss = loss.view(tgt_len, -1)
 
         if new_mems is None:
