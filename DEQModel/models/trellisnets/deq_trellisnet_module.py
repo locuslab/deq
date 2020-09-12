@@ -14,7 +14,7 @@ class TrellisNetDEQModule(DEQModule):
     """ See DEQModule class for documentation """
 
     def __init__(self, func, func_copy):
-        super(TransformerDEQModule, self).__init__(func, func_copy)
+        super(TrellisNetDEQModule, self).__init__(func, func_copy)
         
     def _solve_by_subseq(self, z1s, us, z0, pos_emb, threshold, train_step, subseq_len=100):
         z1s_out = torch.zeros_like(z1s)
