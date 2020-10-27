@@ -1,6 +1,6 @@
 # Deep Equilibrium Models
 
-**2020/10: A [JAX](https://github.com/google/jax#quickstart-colab-in-the-cloud) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).**
+**2020/10: A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).**
 
 **2020/7: A branch `pytorch-1.5` has been created to resolve the DataParallel issue with PyTorch v>=1.5 (see [here](https://github.com/pytorch/pytorch/issues/40457) and [here](https://github.com/huggingface/transformers/pull/4300) for details). Specifically, this is not a DEQ-related issue, but one related to some of the modules DEQ depends on (e.g., adaptive embedding). In PyTorch 1.5, accessing parameters on the replicas is no longer possible. For now, you can use the `pytorch-1.5` to train the model from scratch, but there is no pre-trained model yet following the code change. To run pre-trained models, please still use PyTorch 1.4 and this `master` branch.**
 
