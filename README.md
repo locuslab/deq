@@ -1,10 +1,13 @@
 # Deep Equilibrium Models
 
+### News
 **2020/12: For those who would like to start with a toy version of the DEQ (with much simpler implementation than in this repo), the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction to how to build, train and use a DEQ model: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).**
 
 2020/10: A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).
 
 2020/7: A branch `pytorch-1.5` has been created to resolve the DataParallel issue with PyTorch v>=1.5 (see [here](https://github.com/pytorch/pytorch/issues/40457) and [here](https://github.com/huggingface/transformers/pull/4300) for details). Specifically, this is not a DEQ-related issue, but one related to some of the modules DEQ depends on (e.g., adaptive embedding). In PyTorch 1.5, accessing parameters on the replicas is no longer possible. For now, you can use the `pytorch-1.5` to train the model from scratch, but there is no pre-trained model yet following the code change. To run pre-trained models, please still use PyTorch 1.4 and this `master` branch.
+
+---
 
 This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
 
