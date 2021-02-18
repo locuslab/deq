@@ -12,9 +12,11 @@ import torch.optim as optim
 
 from data_utils import get_lm_corpus
 from models.transformers.deq_transformer import DEQTransformerLM
+from modules.solvers import anderson, broyden
 from modules import radam
 from utils.exp_utils import create_exp_dir
 from utils.data_parallel import BalancedDataParallel
+from torch.utils.tensorboard import SummaryWriter
 
 
 parser = argparse.ArgumentParser(description='PyTorch DEQ Sequence Model')
@@ -95,8 +97,6 @@ parser.add_argument('--eval_tgt_len', type=int, default=150,
                     help='number of tokens to predict for evaluation')
 parser.add_argument('--mem_len', type=int, default=150,
                     help='length of the retained previous heads')
-parser.add_argument('--subseq_len', type=int, default=0,
-                    help='length of subsequence processed each time by DEQ')
 parser.add_argument('--local_size', type=int, default=0,
                     help='local horizon size')
 
@@ -125,6 +125,12 @@ parser.add_argument('--log-interval', type=int, default=200,
                     help='report interval')
 parser.add_argument('--eval-interval', type=int, default=4000,
                     help='evaluation interval')
+parser.add_argument('--solver', default='anderson', type=str,
+                    choices=['anderson', 'broyden'],
+                    help='solver to use.')
+parser.add_argument('--stop_mode', type=str, default="rel",
+                    choices=['abs', 'rel'],
+                    help='stop criterion absolute or relative')    
 parser.add_argument('--f_thres', type=int, default=50,
                     help='forward pass Broyden threshold')
 parser.add_argument('--b_thres', type=int, default=80,
@@ -164,7 +170,6 @@ parser.add_argument('--name', type=str, default='N/A',
 args = parser.parse_args()
 args.tied = not args.not_tied
 args.pretrain_steps += args.start_train_steps
-print(f"Experiment name: {args.name}")
 assert args.mem_len > 0, "For now you must set mem_len > 0 when using deq"
 args.work_dir += "deq"
 args.cuda = torch.cuda.is_available()
@@ -175,9 +180,15 @@ if args.d_embed < 0:
 assert args.batch_size % args.batch_chunk == 0
 
 args.work_dir = '{}-{}'.format(args.work_dir, args.dataset)
-args.work_dir = os.path.join(args.work_dir, time.strftime('%Y%m%d-%H%M%S'))
+timestamp = time.strftime('%Y%m%d-%H%M%S')
+if args.restart_dir:
+    timestamp = args.restart_dir.split('/')[1]
+args.work_dir = os.path.join(args.work_dir, timestamp)
+if args.name == "N/A":
+    args.name = timestamp
+print(f"Experiment name: {args.name}")
 logging = create_exp_dir(args.work_dir,
-    scripts_to_save=['train_transformer.py', 'models/transformers/deq_transformer.py'], debug=args.debug)
+    scripts_to_save=['train_transformer.py', 'models/transformers/deq_transformer.py', 'modules/solvers.py'], debug=args.debug)
 
 # Set the random seed manually for reproducibility.
 np.random.seed(args.seed)
@@ -198,7 +209,7 @@ corpus = get_lm_corpus(args.data, args.dataset)
 ntokens = len(corpus.vocab)
 args.n_token = ntokens
 
-eval_batch_size = 4
+eval_batch_size = max(4, torch.cuda.device_count())
 tr_iter = corpus.get_iterator('train', args.batch_size, args.tgt_len, device=device)
 va_iter = corpus.get_iterator('valid', eval_batch_size, args.eval_tgt_len, device=device)
 te_iter = corpus.get_iterator('test', eval_batch_size, args.eval_tgt_len, device=device)
@@ -233,7 +244,7 @@ def weights_init(m):
         if hasattr(m, 'emb_projs'):
             for i in range(len(m.emb_projs)):
                 if m.emb_projs[i] is not None:
-                    nn.init.normal_(m.emb_projs[i], 0.0, args.proj_init_std)
+                    nn.init.normal_(m.emb_projs[i].weight, 0.0, args.proj_init_std)
     elif classname.find('Embedding') != -1:
         if hasattr(m, 'weight'):
             init_weight(m.weight)
@@ -245,9 +256,9 @@ def weights_init(m):
         if hasattr(m, 'out_projs'):
             for i in range(len(m.out_projs)):
                 if m.out_projs[i] is not None:
-                    nn.init.normal_(m.out_projs[i], 0.0, args.proj_init_std)
+                    nn.init.normal_(m.out_projs[i].weight, 0.0, args.proj_init_std)
     elif classname.find('LayerNorm') != -1:
-        if hasattr(m, 'weight'):
+        if hasattr(m, 'weight') and m.weight is not None:
             nn.init.normal_(m.weight, 1.0, args.init_std)
         if hasattr(m, 'bias') and m.bias is not None:
             init_bias(m.bias)
@@ -270,6 +281,8 @@ def update_dropatt(m):
 if args.restart:
     with open(os.path.join(args.restart_dir, 'model.pt'), 'rb') as f:
         model = torch.load(f)
+        model.stop_mode = args.stop_mode
+        model.logging = logging
     model = model.float()
     model.apply(update_dropout)
     model.apply(update_dropatt)
@@ -278,7 +291,8 @@ else:
                              args.dropout, args.dropatt, tie_weights=args.tied, d_embed=args.d_embed,
                              div_val=args.div_val, tie_projs=tie_projs, pre_lnorm=args.pre_lnorm,
                              wnorm=args.wnorm, local_size=args.local_size, pretrain_steps=args.pretrain_steps,
-                             tgt_len=args.tgt_len, mem_len=args.mem_len, cutoffs=cutoffs, load=args.load)
+                             tgt_len=args.tgt_len, mem_len=args.mem_len, cutoffs=cutoffs, load=args.load,
+                             solver=eval(args.solver), stop_mode="rel", logging=logging)
     if len(args.load) == 0:
         model.apply(weights_init)    # Note: This applies weight_init recursively to modules in model
         model.word_emb.apply(weights_init)
@@ -296,7 +310,7 @@ else:
 
 #### optimizer
 optimizer = getattr(optim if args.optim != 'RAdam' else radam, args.optim)(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
+writer = None
 
 #### scheduler
 if args.scheduler == 'cosine':
@@ -315,6 +329,8 @@ elif args.scheduler == 'dev_perf':
         factor=args.decay_rate, patience=args.patience, min_lr=args.lr_min)
 
 if args.restart:
+    # E.g., When you want to resume from a checkpoint from the same machine, where things should
+    #       be stored in `args.restart_dir`
     if os.path.exists(os.path.join(args.restart_dir, 'optimizer.pt')):
         with open(os.path.join(args.restart_dir, 'optimizer.pt'), 'rb') as f:
             opt_state_dict = torch.load(f)
@@ -322,11 +338,30 @@ if args.restart:
     else:
         print('Optimizer was not saved. Start from scratch.')
 
+if args.start_train_steps > 0 and not args.restart:
+    # E.g., When you want to directly load a state_dict (e.g., trained on another machine), 
+    #       You may want to manually adjust the optimizer
+    diff_from_warmup = args.start_train_steps - args.warmup_step
+    # Speed up the scheduler
+    if args.scheduler in ['cosine', 'constant', 'dev_perf']:
+        if diff_from_warmup < 0:
+            # Hasn't finished warmup yet
+            curr_lr = args.lr * args.start_train_steps / args.warmup_step
+            optimizer.param_groups[0]['lr'] = curr_lr
+        else:
+            if args.scheduler == 'cosine':
+                for i in range(args.warmup_step, args.start_train_steps):
+                    optimizer.step()
+                    scheduler.step(i)
+    elif args.scheduler == 'inv_sqrt':
+        for i in range(args.warmup_step, args.start_train_steps):
+            optimizer.step()
+            scheduler.step(i)
+
 logging('=' * 100)
 for k, v in args.__dict__.items():
     logging('    - {} : {}'.format(k, v))
 logging('=' * 100)
-logging(f'#params = {args.n_all_param}')
 
 ###############################################################################
 # Training code
@@ -335,7 +370,6 @@ logging(f'#params = {args.n_all_param}')
 def evaluate(eval_iter):
     global train_step
     model.eval()
-    subseq_len = args.subseq_len
     model.reset_length(args.eval_tgt_len, args.mem_len)
 
     # Evaluation
@@ -346,7 +380,7 @@ def evaluate(eval_iter):
             if 0 < args.max_eval_steps <= i:
                 break
             ret = para_model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
-                        b_thres=args.b_thres, subseq_len=subseq_len)
+                             b_thres=args.b_thres)
             loss, mems = ret[0], ret[1:]
             loss = loss.mean()
             total_loss += seq_len * loss.float().item()
@@ -359,7 +393,6 @@ def evaluate(eval_iter):
 def train():
     global train_step, train_loss, best_val_loss, eval_start_time, log_start_time
     model.train()
-    subseq_len = args.subseq_len
     model.reset_length(args.tgt_len, args.mem_len)
 
     train_iter = tr_iter.get_varlen_iter() if args.varlen else tr_iter
@@ -378,8 +411,7 @@ def train():
             for i in range(args.batch_chunk):
                 data_i = data_chunks[i].contiguous()
                 target_i = target_chunks[i].contiguous()
-                ret = para_model(data_i, target_i, mems[i], train_step=train_step, f_thres=args.f_thres, 
-                                 b_thres=args.b_thres, subseq_len=subseq_len)
+                ret = para_model(data_i, target_i, mems[i], train_step=train_step, f_thres=args.f_thres, b_thres=args.b_thres)
                 loss, mems[i] = ret[0], ret[1:]         # mems[i]: # 3 x bsz
                 loss = loss.float().mean().type_as(loss) / args.batch_chunk
                 loss.backward()
@@ -387,8 +419,7 @@ def train():
                 
         else:
             # Mode 2: Normal training with one batch per iteration
-            ret = para_model(data, target, mems, train_step=train_step, f_thres=args.f_thres, 
-                             b_thres=args.b_thres, subseq_len=subseq_len)
+            ret = para_model(data, target, mems, train_step=train_step, f_thres=args.f_thres, b_thres=args.b_thres)
             loss, mems = ret[0], ret[1:]
             loss = loss.float().mean().type_as(loss)
             loss.backward()

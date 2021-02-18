@@ -27,9 +27,10 @@ if [[ $1 == 'train' ]]; then
         --mem_len 150 \
         --eval_tgt_len 150 \
         --wnorm \
-        --f_thres 30 \
-        --b_thres 40 \
-        --subseq_len 75 \
+        --solver broyden \
+        --stop_mode abs \
+        --f_thres 25 \
+        --b_thres 35 \
         --batch_size 56 \
         --gpu0_bsz 14 \
         --multi_gpu \

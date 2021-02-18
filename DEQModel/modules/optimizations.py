@@ -143,7 +143,7 @@ class VariationalDropout(nn.Module):
 
 
 class VariationalHidDropout(nn.Module):
-    def __init__(self, dropout=0.0):
+    def __init__(self, dropout=0.0, length_first=False):
         """
         Hidden-to-hidden (VD-based) dropout that applies the same mask at every time step and every layer of TrellisNet
         :param dropout: The dropout rate (0 means no dropout is applied)
@@ -152,12 +152,17 @@ class VariationalHidDropout(nn.Module):
         super(VariationalHidDropout, self).__init__()
         self.dropout = dropout
         self.mask = None
+        self.length_first = length_first
 
-    def reset_mask(self, x):
+    def reset_mask(self, bsz, d, length):
         dropout = self.dropout
 
-        # Dimension (N, C, L)
-        m = torch.zeros_like(x[:,:,:1]).bernoulli_(1 - dropout)
+        if self.length_first:
+            # Dimension (N, L, C)
+            m = torch.zeros(bsz, 1, d).bernoulli_(1 - dropout)
+        else:
+            # Dimension (N, C, L)
+            m = torch.zeros(bsz, d, 1).bernoulli_(1 - dropout)
         mask = m.requires_grad_(False) / (1 - dropout)
         self.mask = mask
         return mask
@@ -165,7 +170,7 @@ class VariationalHidDropout(nn.Module):
     def forward(self, x):
         if not self.training or self.dropout == 0:
             return x
-        assert self.mask is not None, "You need to reset mask before using VariationalHidDropout"
+        assert self.mask is not None, f"You need to reset mask before using {self.__class__.__name__}"
         mask = self.mask.expand_as(x)  # Make sure the dimension matches
         return mask * x
     
@@ -174,9 +179,9 @@ class VariationalAttnDropout(VariationalHidDropout):
     def __init__(self, dropout=0.0, temporal=True):
         super(VariationalAttnDropout, self).__init__(dropout)
 
-    def reset_mask(self, x):
+    def reset_mask(self, bsz, n_head, qlen, klen):
         # Dimension (N, n_head, L1, L2)
-        m = torch.zeros_like(x).bernoulli_(1 - self.dropout)
+        m = torch.zeros(bsz, n_head, qlen, klen).bernoulli_(1 - self.dropout)
         mask = m.requires_grad_(False) / (1 - self.dropout)
         self.mask = mask
         return mask

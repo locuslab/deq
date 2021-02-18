@@ -1,14 +1,17 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import torch.autograd as autograd
 import sys
 import copy
+import numpy as np
+from termcolor import colored
+import os
 
 sys.path.append('../../')
 
 from modules.optimizations import weight_norm, VariationalDropout, VariationalHidDropout, VariationalAttnDropout
-
-from models.transformers.deq_transformer_module import TransformerDEQModule
+from modules.solvers import anderson, broyden
 
 from utils.adaptive_embedding import AdaptiveEmbedding
 from utils.positional_embedding import PositionalEmbedding
@@ -23,45 +26,37 @@ class WeightSharePositionwiseFF(nn.Module):
         self.d_inner = d_inner
         self.dropout = dropout
 
-        self.ff1_net = nn.Conv1d(d_model, d_inner, kernel_size=1)
-        self.drop1 = VariationalHidDropout(dropout=dropout)
-        self.ff2_net = nn.Conv1d(d_inner, d_model, kernel_size=1)
-        self.drop2 = VariationalHidDropout(dropout=dropout)
+        self.ff1_net = nn.Linear(d_model, d_inner)
+        self.drop1 = VariationalHidDropout(dropout=dropout, length_first=True)
+        self.ff2_net = nn.Linear(d_inner, d_model)
+        self.drop2 = VariationalHidDropout(dropout=dropout, length_first=True)
 
         self.pre_lnorm = pre_lnorm
     
     def wnorm(self):
-        print("Weight normalization applied to PosFF")
         self.ff1_net, self.ff1_fn = weight_norm(module=self.ff1_net, names=['weight'], dim=0)
         self.ff2_net, self.ff2_fn = weight_norm(module=self.ff2_net, names=['weight'], dim=0)
 
     def reset(self, bsz, qlen):
-        self.drop1.reset_mask(torch.zeros(bsz, self.d_inner, qlen))
-        self.drop2.reset_mask(torch.zeros(bsz, self.d_model, qlen))
+        self.drop1.reset_mask(bsz, self.d_inner, qlen)
+        self.drop2.reset_mask(bsz, self.d_model, qlen)
         if 'ff1_fn' in self.__dict__:
             self.ff1_fn.reset(self.ff1_net)
         if 'ff2_fn' in self.__dict__:
             self.ff2_fn.reset(self.ff2_net)
 
-    def copy(self, func):
-        self.ff1_net.weight.data = func.ff1_net.weight.data.clone()
-        self.ff2_net.weight.data = func.ff2_net.weight.data.clone()
-        self.ff1_net.bias.data = func.ff1_net.bias.data.clone()
-        self.ff2_net.bias.data = func.ff2_net.bias.data.clone()
-        self.drop1.mask = func.drop1.mask.clone()
-        self.drop2.mask = func.drop2.mask.clone()
-
     def forward(self, inp, attn_out=None):
         assert inp.size(1) == self.d_model, "Feature dimension not match!!"
 
+        inp = inp.transpose(1,2)
         if self.pre_lnorm:
-            inp = F.layer_norm(inp.transpose(1,2), (self.d_model,)).transpose(1,2)
+            inp = F.layer_norm(inp, (self.d_model,))
         relu_out1 = self.drop1(F.relu(self.ff1_net(inp)))
         out2 = self.drop2(self.ff2_net(relu_out1))
         output = out2 + inp
         if not self.pre_lnorm:
-            output = F.layer_norm(output.transpose(1,2), (self.d_model,)).transpose(1,2)
-        return output
+            output = F.layer_norm(output, (self.d_model,))
+        return output.transpose(1,2)
 
 
 class WeightShareSelfAttention(nn.Module):
@@ -87,31 +82,19 @@ class WeightShareSelfAttention(nn.Module):
         self.local_size = local_size
         
     def wnorm(self):
-        print("Weight normalization applied to SA")
         self.qkv_net, self.qkv_fn = weight_norm(module=self.qkv_net, names=['weight'], dim=0)
         self.r_net, self.r_fn = weight_norm(module=self.r_net, names=['weight'], dim=0)
         self.o_net, self.o_fn = weight_norm(module=self.o_net, names=['weight'], dim=0)
 
     def reset(self, bsz, qlen, klen):
-        self.dropatt.reset_mask(torch.zeros(bsz, self.n_head, qlen, klen))
-        self.drop.reset_mask(torch.zeros(bsz, self.d_model, qlen))
+        self.dropatt.reset_mask(bsz, self.n_head, qlen, klen)
+        self.drop.reset_mask(bsz, self.d_model, qlen)
         if 'qkv_fn' in self.__dict__:
             self.qkv_fn.reset(self.qkv_net)
         if 'r_fn' in self.__dict__:
             self.r_fn.reset(self.r_net)
         if 'o_fn' in self.__dict__:
             self.o_fn.reset(self.o_net)
-
-    def copy(self, func):
-        # Destructive copy
-        self.qkv_net.weight.data = func.qkv_net.weight.data.clone()
-        self.r_net.weight.data = func.r_net.weight.data.clone()
-        self.r_w_bias.data = func.r_w_bias.data.clone()
-        self.r_r_bias.data = func.r_r_bias.data.clone()
-        self.o_net.weight.data = func.o_net.weight.data.clone()
-        self.o_net.bias.data = func.o_net.bias.data.clone()
-        self.dropatt.mask = func.dropatt.mask.clone()
-        self.drop.mask = func.drop.mask.clone()
 
     def _rel_shift(self, x):
         # x has dimension (bsz x n_head x qlen x klen)
@@ -121,7 +104,7 @@ class WeightShareSelfAttention(nn.Module):
         return x_padded[:,:,1:].view_as(x)
 
     def forward(self, z1ss, pos_emb, u1ss, mems=None):
-        # Note: In this context, qlen means the length of the (small) subsequence; and mlen describes
+        # Note: In this context, qlen means the length of the sequence; and mlen describes
         #       the length of the padding. Their sum is klen. 
         bsz, d_model, qlen = z1ss.size()
         r_w_bias, r_r_bias = self.r_w_bias, self.r_r_bias
@@ -134,7 +117,7 @@ class WeightShareSelfAttention(nn.Module):
         cat = torch.cat([mems, z1ss], dim=-1)
 
         if self.pre_lnorm:
-            cat = F.layer_norm(cat.transpose(1,2), (d_model,)).transpose(1,2)
+            cat = f.layer_norm(cat.transpose(1,2), (d_model,)).transpose(1,2)
         w_heads = self.qkv_net(cat)      # (N x 3*d_model x seq_len)
         r_head_k = self.r_net(pos_emb)
 
@@ -196,8 +179,8 @@ class RelPartialLearnableDecoderLayer(nn.Module):
 
         pre_lnorm = kwargs.get('pre_lnorm')
         local_size = kwargs.get('local_size', None)
-        self.dec_attn = WeightShareSelfAttention(d_model, n_head, d_head, dropout,
-                                                 dropatt=0.0, pre_lnorm=pre_lnorm,  local_size=local_size)
+        self.dec_attn = WeightShareSelfAttention(d_model, n_head, d_head, dropout=dropout, dropatt=0.0, 
+                                                 pre_lnorm=pre_lnorm,  local_size=local_size)
         self.pos_ff = WeightSharePositionwiseFF(d_model, d_inner, dropout, pre_lnorm=pre_lnorm)
     
     def wnorm(self):
@@ -209,22 +192,19 @@ class RelPartialLearnableDecoderLayer(nn.Module):
         self.dec_attn.reset(bsz, qlen, klen)
         self.pos_ff.reset(bsz, qlen)
 
-    def copy(self, func):
-        self.dec_attn.copy(func.dec_attn)
-        self.pos_ff.copy(func.pos_ff)
-
     def forward(self, z1ss, uss, z0, *args):
         pos_emb = args[0]
-        output = self.dec_attn(z1ss, pos_emb, uss, mems=z0)
-        output = self.pos_ff(output)
-        return output
+        new_z1ss = self.dec_attn(z1ss, pos_emb, uss, mems=z0)
+        new_z1ss = self.pos_ff(new_z1ss)
+        return new_z1ss
 
 
 class DEQTransformerLM(nn.Module):
     def __init__(self, n_token, n_layer, eval_n_layer, n_head, d_model, d_head, d_inner,
                  dropout, dropatt, tie_weights=True, d_embed=None, div_val=1,
                  tie_projs=[False], pre_lnorm=False, wnorm=False, tgt_len=None,
-                 mem_len=None, local_size=0, pretrain_steps=1, cutoffs=[], load=''):
+                 mem_len=None, local_size=0, pretrain_steps=1, cutoffs=[], load='', 
+                 solver=anderson, stop_mode="rel", logging=None):
         super().__init__()
         self.n_token = n_token
 
@@ -237,7 +217,7 @@ class DEQTransformerLM(nn.Module):
         self.word_emb = AdaptiveEmbedding(n_token, d_embed, d_model, cutoffs, div_val=div_val)
         self.iodrop = VariationalDropout()
         self.dropout = dropout
-        self.drop = VariationalHidDropout(dropout=dropout)
+        self.pos_drop = VariationalHidDropout(dropout=dropout)
         self.pretrain_steps = pretrain_steps
 
         self.tgt_len = tgt_len
@@ -251,16 +231,12 @@ class DEQTransformerLM(nn.Module):
         self.pos_emb = PositionalEmbedding(self.d_model)
         self.func = RelPartialLearnableDecoderLayer(n_head, d_model, d_head, d_inner, dropout=dropout, dropatt=dropatt,
                                                     pre_lnorm=pre_lnorm, local_size=local_size)
-        self.func_copy = copy.deepcopy(self.func)
-        if wnorm:
-            # If wnorm is specified, we need to make sure to do the deepcopy first
-            # because pytorch prevents non-user defined variables from being copied.
-            # The deepcopy will only access and copy the `xxx.weight` instead
-            # of messing with `xxx.weight_g` that wnorm actually optimizes.
-            self.func.wnorm()
-        for params in self.func_copy.parameters():
-            params.requires_grad_(False)                 # Turn off autograd for func_copy
-        self.deq = TransformerDEQModule(self.func, self.func_copy)
+        self.solver = solver
+        self.hook = None
+        self.stop_mode = stop_mode
+        self.alternative_mode = "abs" if self.stop_mode == "rel" else "rel"
+        self.logging = logging or print
+        if wnorm: self.func.wnorm()
 
         # use adaptive softmax (including standard softmax)
         # (Note: To use sample softmax, refer to the Transformer-XL implementation)
@@ -273,14 +249,14 @@ class DEQTransformerLM(nn.Module):
         if tie_projs:
             for i, tie_proj in enumerate(tie_projs):
                 if tie_proj and div_val == 1 and d_model != d_embed:
-                    self.crit.out_projs[i] = self.word_emb.emb_projs[0]
+                    self.crit.out_projs[i].weight.data = self.word_emb.emb_projs[0].weight.data
                 elif tie_proj and div_val != 1:
-                    self.crit.out_projs[i] = self.word_emb.emb_projs[i]
+                    self.crit.out_projs[i].weight.data = self.word_emb.emb_projs[i].weight.data
 
         if len(load) > 0:
             params_dict = torch.load(load)
             self.load_weights(params_dict)
-            print(f"Finished loading. d_embed={self.inject_conv.weight.data.size(1)}")
+            self.logging(f"Finished loading. d_embed={self.inject_conv.weight.data.size(1)}")
 
     def reset_length(self, tgt_len, mem_len):
         self.tgt_len = tgt_len
@@ -289,27 +265,25 @@ class DEQTransformerLM(nn.Module):
     def load_weights(self, params_dict):
         self.load_state_dict(params_dict)
    
-    def save_weights(self, name='pretrained_deq'):
-        with open(f'{name}.pkl', 'wb') as f:
-            print(f"Saving weights at {name}.pkl")
+    def save_weights(self, path, name='pretrained_deq'):
+        with open(os.path.join(path, f'{name}.pkl'), 'wb') as f:
+            self.logging(f"Saving weights at {name}.pkl")
             torch.save(self.state_dict(), f)
 
     def init_mems(self):
         if self.mem_len <= 0:
-            print("init_mems: Hmmmm... you shouldn't be here.")
+            self.logging("init_mems: Hmmmm... you shouldn't be here.")
             return None
 
         # mems is not None
         with torch.no_grad():
-            param = next(self.parameters()) 
-            mems = [torch.empty(0, dtype=param.dtype, device=param.device),
-                    torch.empty(0, dtype=param.dtype, device=param.device)]
+            mems = [torch.empty(0), torch.empty(0)]
             return mems       # For z0 and u0
             
     def _update_mems(self, z1s, us, z0, qlen, mlen):
         # does not deal with None
         if self.mem_len <= 0: 
-            print("_update_mems: Hmmmm... you shouldn't be here.")
+            self.logging("_update_mems: Hmmmm... you shouldn't be here.")
             return None
 
         # mems is not None
@@ -322,12 +296,11 @@ class DEQTransformerLM(nn.Module):
 
             return [new_z0, new_u0]
 
-    def _forward(self, dec_inp, subseq_len, mems=None, f_thres=30, b_thres=40, train_step=-1):
+    def _forward(self, dec_inp, mems=None, f_thres=30, b_thres=40, train_step=-1):
         """
         Apply the DEQ-Transformer language model on input word tokens
 
         :param dec_inp: Input words of shape (seq_len x bsz) and dtype torch.LongTensor
-        :param subseq_len: The subsequence length with which we feed the segments of the data to DEQ
         :param mems: History madding and the transformed input corresponding to it; must be a tuple (z0, u0)
                      where z0 has dimension (bsz x d_model x pad_len) and u0 has size (bsz x 3*d_model x pad_len)
         :param f_thres: Forward pass threshold
@@ -347,32 +320,61 @@ class DEQTransformerLM(nn.Module):
         if z0 is not None and z0.nelement() > 0:
             assert z0.size(2) == u0.size(2), "Padding fixed points and padding embedding dimensions don't agree"
         else:
-            z0 = torch.zeros(bsz, d_model, 0)
-            u0 = torch.zeros(bsz, 3*d_model, 0)
+            z0, u0 = torch.zeros(bsz, d_model, 0), torch.zeros(bsz, 3*d_model, 0)
         mlen = z0.size(2)
         klen = mlen + qlen    # qlen is seq_len, mlen is pad_len
 
         pos_seq = torch.arange(klen-1, -1, -1.0)
-        pos_emb = self.drop(self.pos_emb(pos_seq))     # bsz x d_model x (qlen + mlen) for positional embedding
+        pos_emb = self.pos_drop(self.pos_emb(pos_seq))     # bsz x d_model x (qlen + mlen) for positional embedding
         us = torch.cat([u0, u1s], dim=2)
         z1s = torch.zeros(bsz, d_model, qlen)          # bsz x d_model x (qlen + mlen) for initial estimate of output
+        func_args = [us, z0, pos_emb]
+        seed = np.random.uniform(0,1)
 
         if 0 <= train_step < self.pretrain_steps:
             # In pretraining mode with stacked (weight-tied) layers. NOT recommended for large models (as then
             # a stacking of, for example, 16 layers would be extremely inefficient). One can also train with
             # M layers and evaluate using N layers (which typically leads to worse performance).
             n_layer = self.n_layer if self.training or train_step > 0 else self.eval_n_layer
-            torch.cuda.empty_cache()
             for i in range(n_layer):
-                z1s = self.func(z1s, us, z0, pos_emb)
+                z1s = self.func(z1s, *func_args)
+            new_z1s = z1s
         else:
             # Compute the equilibrium via DEQ. When in training mode, we need to register the analytical backward
             # pass according to the Theorem 1 in the paper.
-            z1s = self.deq(z1s, us, z0, pos_emb=pos_emb, subseq_len=subseq_len, threshold=f_thres, train_step=train_step)
-                    
-        core_out = self.iodrop(z1s, self.dropout)
-        core_out = core_out.permute(2,0,1).contiguous()       # qlen x bsz x d_model
-        new_mems = self._update_mems(z1s, us, z0, mlen, qlen)
+
+            # 2021/2 Update: Support both Broyden and Anderson solvers now. Also using backward hook for the implicit function theorem.
+            with torch.no_grad():
+                result = self.solver(lambda z: self.func(z, *func_args), z1s, threshold=f_thres, stop_mode=self.stop_mode)
+                z1s, forward_res = result['result'], result[f'{self.stop_mode}_trace']
+            new_z1s = z1s
+            
+            if self.training:
+                z1s.requires_grad_()
+                new_z1s = self.func(z1s, *func_args)
+
+                z1s_copy = z1s.clone().detach().requires_grad_()
+                new_z1s_copy = self.func(z1s_copy, *func_args)
+                def backward_hook(grad):
+                    result = self.solver(lambda y: autograd.grad(new_z1s_copy, z1s_copy, y, retain_graph=True)[0] + grad, torch.zeros_like(grad), threshold=b_thres)
+                    new_grad = result['result']
+
+                    # DELETE
+                    if z1s.get_device() == 0:
+                        stop_diff, alt_diff = result['lowest'], min(result[f'{self.alternative_mode}_trace'])
+                        if seed < 1e-1 or train_step == self.pretrain_steps:
+                            self.logging(colored(f"Backward {self.stop_mode}_diff: {stop_diff}; {self.alternative_mode}_diff: {alt_diff}; nstep: {result['nstep']}", "red"))
+
+                    return new_grad
+                new_z1s.register_hook(backward_hook)
+
+            # DELETE
+            if new_z1s.get_device() == 0:
+                stop_diff, alt_diff = result['lowest'], min(result[f'{self.alternative_mode}_trace'])
+                if (seed < 1e-1 or train_step == self.pretrain_steps):
+                    self.logging(colored(f"Forward {self.stop_mode}_diff: {stop_diff}; {self.alternative_mode}_diff: {alt_diff}; nstep: {result['nstep']}", "yellow"))
+        core_out = self.iodrop(new_z1s, self.dropout).permute(2,0,1).contiguous()       # qlen x bsz x d_model
+        new_mems = self._update_mems(new_z1s, us, z0, mlen, qlen)
         return core_out, new_mems
 
     def forward(self, data, target, mems, train_step=-1, **kwargs):
@@ -388,44 +390,21 @@ class DEQTransformerLM(nn.Module):
         qlen, bsz = data.size()
         mlen = 0 if mems[0].nelement() == 0 else mems[0].size(2)
         klen = mlen + qlen
-        
-        # Reset dropout in self.func, and copy everything (weights, dropout masks) to self.func_copy
-        self.drop.reset_mask(torch.zeros(1, self.d_model, klen))
+    
+        # Reset dropout in self.func
+        self.pos_drop.reset_mask(1, self.d_model, klen)
         self.func.reset(bsz, qlen, klen)
-        self.func_copy.copy(self.func)
 
         tgt_len = target.size(0)
-        subseq_len = kwargs.get('subseq_len', 75)
         f_thres = kwargs.get('f_thres', 30)
         b_thres = kwargs.get('b_thres', 40)
-        hidden, new_mems = self._forward(data, subseq_len=subseq_len, mems=mems, 
-                                         f_thres=f_thres, b_thres=b_thres, train_step=train_step)
+        hidden, new_mems = self._forward(data, mems=mems, f_thres=f_thres, b_thres=b_thres, train_step=train_step)
         
         pred_hid = hidden[-tgt_len:]
-        loss = self.crit(pred_hid.contiguous().view(-1, pred_hid.size(-1)), target.contiguous().view(-1))
+        loss = self.crit(pred_hid.view(-1, pred_hid.size(-1)), target.contiguous().view(-1))
         loss = loss.view(tgt_len, -1)
 
         if new_mems is None:
             return [loss]
         else:
             return [loss] + new_mems
-
-
-if __name__ == '__main__':
-    dev = 'cuda'
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    model = DEQTransformerLM(n_token=500, n_layer=2,
-                             eval_n_layer=24, n_head=12, d_model=120, d_head=10, d_inner=500,
-                             dropout=0.1, dropatt=0.1, mem_len=100, tgt_len=100, tie_weights=True, d_embed=None).to(dev)
-    raw_data = torch.randint(0, 500, (200, 7)).long().to(dev)
-    data, target = raw_data[:75], raw_data[1:76]
-    mems = None
-    train_step=-1
-    model.eval()
-
-    model.train()
-    ret = model(data, target, mems=mems, f_thres=50, b_thres=80, train_step=train_step)
-    loss, mems = ret[0], ret[1:]
-    loss = loss.float().mean().type_as(loss)
-    loss.backward()
-    print(model.func.dec_attn.qkv_net.weight.grad)

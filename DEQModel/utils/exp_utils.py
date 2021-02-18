@@ -33,7 +33,13 @@ def create_exp_dir(dir_path, scripts_to_save=None, debug=False):
             dst_file = os.path.join(dir_path, 'scripts', os.path.basename(script))
             shutil.copyfile(script, dst_file)
 
-    return get_logger(log_path=os.path.join(dir_path, 'log.txt'))
+    if not os.path.exists(os.path.join(dir_path, 'log.txt')):
+        return get_logger(log_path=os.path.join(dir_path, 'log.txt'))
+    else:
+        for i in range(1, 20):
+            new_path = os.path.join(dir_path, f'log{i}.txt')
+            if not os.path.exists(new_path):
+                return get_logger(log_path=new_path)
 
 def save_checkpoint(model, optimizer, path, epoch):
     torch.save(model, os.path.join(path, 'model_{}.pt'.format(epoch)))

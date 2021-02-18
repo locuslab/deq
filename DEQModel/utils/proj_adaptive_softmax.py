@@ -31,13 +31,13 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
             self.cluster_bias = nn.Parameter(torch.zeros(self.n_clusters))
 
         self.out_layers = nn.ModuleList()
-        self.out_projs = nn.ParameterList()
+        self.out_projs = nn.ModuleList()
 
         if div_val == 1:
             for i in range(len(self.cutoffs)):
                 if d_proj != d_embed:
                     self.out_projs.append(
-                        nn.Parameter(torch.Tensor(d_proj, d_embed))
+                        nn.Linear(d_embed, d_proj, bias=False)   # nn.Parameter(torch.Tensor(d_proj, d_embed))
                     )
                 else:
                     self.out_projs.append(None)
@@ -49,7 +49,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
                 d_emb_i = d_embed // (div_val ** i)
 
                 self.out_projs.append(
-                    nn.Parameter(torch.Tensor(d_proj, d_emb_i))
+                    nn.Linear(d_emb_i, d_proj, bias=False)     # nn.Parameter(torch.Tensor(d_proj, d_emb_i))
                 )
 
                 self.out_layers.append(nn.Linear(d_emb_i, r_idx-l_idx))
@@ -61,7 +61,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
             logit = F.linear(hidden, weight, bias=bias)
         else:
             # if CUDA_MAJOR <= 9 and CUDA_MINOR <= 1:
-            proj_hid = F.linear(hidden, proj.t().contiguous())
+            proj_hid = F.linear(hidden, proj.weight.t().contiguous())
             logit = F.linear(proj_hid, weight, bias=bias)
             # else:
             #     logit = torch.einsum('bd,de,ev->bv', (hidden, proj, weight.t()))
