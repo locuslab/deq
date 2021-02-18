@@ -89,7 +89,7 @@ We provide some reasonably good pre-trained weights here so that one can quickly
 
 | Description   | Task              | Dataset             | Model                                      | Expected Performance    |
 | ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
-| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1I0q6f8-XFAEDqv-Zwi5Mxc9WtwmJT3sw/view?usp=sharing) |   23.1 Perplexity   |
+| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1lZx_sHt0-1gJVgXx90LDRizq3k-ZI0SW/view?usp=sharing) |   23.2 Perplexity   |
 
 (more to come)
 
