@@ -1,9 +1,13 @@
 # Deep Equilibrium Models
 
 ### News
+
+2021/2: We provide a much cleaner version of DEQ-Transformer here, without all the copying/cloning/DummyBackward "tricks" in the original implementation. However, note that we have not fully tested out the cleaner implementation on all settings reported in the paper (e.g., Transformers of different scales; TrellisNet; etc.). The new implementation is inspired by the [NeurIPS 2020 Deep Implicit Layer Tutorial](http://implicit-layers-tutorial.org/).
+
 2020/12: For those who would like to start with a toy version of the DEQ (with much simpler implementation than in this repo), the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction to how to build, train and use a DEQ model: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
 
 2020/10: A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).
+
 ---
 
 This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
@@ -46,8 +50,7 @@ bash get_data.sh
 
 ## Usage
 
-All DEQ instantiations share the same underlying framework, whose core functionalities are provided in `DEQModel/modules`. In particular, `deq.py` provides the PyTorch functions that solves for the roots in forward and backward passes, **where the 
-backward pass is hidden as an inner class of `DEQModule`**. `broyden.py` provides an implementation of the Broyden's method. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in 
+All DEQ instantiations share the same underlying framework, whose core functionalities are provided in `DEQModel/modules`. In particular, `solvers.py` provides an implementation of the Broyden's method and Anderson acceleration. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in 
 `optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).
 
 Training and evaluation scripts of DEQ-Transformer are provided, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags. For instance:
@@ -58,7 +61,7 @@ python train_transformer.py --cuda --multi_gpu --d_embed 600 --d_model 600 --pre
 #### Example Configuration Files
 We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
 ```sh
-bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40 --subseq_len 75
+bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40 --solver broyden
 ```
 **You should expect to get a test-set perplexity around 23.8 with this setting.**
 
@@ -106,11 +109,11 @@ bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_
 
 3. For most of the time, pre-training the model with a very shallow network (e.g., a 2-layer network) for a while (e.g., 10-20% of the total training steps/epochs) can be helpful, as it makes f_\theta more stable. However, note that these shallow networks themselves usually achieve very bad results on their own (e.g., imagine a 10-layer weight-tied temporal convolution).
 
-4. Patience. As the paper discusses, DEQ models could be slower than the corresponding "conventional" deep networks :P
+4. Patience. As the paper discusses, DEQ models could be (sometimes much) slower than the corresponding "conventional" deep networks :P
 
 5. Variational dropout typically makes equilibrium states harder to find. However, empirically, we find them to be extremely useful regularizations to these weight-tied models.
 
-6. You can vary factors such as `--mem_len` (for DEQ-Transformer) and `--f_thres` at inference time. As we show in the paper, more Broyden steps typically yields (diminishingly) better results. Moreover, as DEQ only has "one layer", storage cost of the cached history sequence of size `--mem_len` is actually very cheap.
+6. You can vary factors such as `--mem_len` and `--f_thres` at inference time. As we show in the paper, more Broyden/Anderson steps typically yields (diminishingly) better results. Moreover, as DEQ only has "one layer", storage cost of the cached history sequence of size `--mem_len` is actually very cheap.
 
 
 ## Credits
