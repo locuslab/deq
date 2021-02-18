@@ -1,14 +1,11 @@
 # Deep Equilibrium Models
 
-<<<<<<< Updated upstream
-=======
 ### News
 2020/12: For those who would like to start with a toy version of the DEQ (with much simpler implementation than in this repo), the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction to how to build, train and use a DEQ model: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
 
 2020/10: A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).
 ---
 
->>>>>>> Stashed changes
 This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
 
 Unlike many existing "deep" techniques, the DEQ model is a implicit-depth architecture that directly solves for and
@@ -18,16 +15,9 @@ applicability of such models on practical, large-scale and high-dimensional sequ
 datasets, (carefully designed) DEQ models can acheive results on par with (or slightly better than) the SOTA 
 deep networks, while not using a "deep" stacking (and with only O(1) memory). 
 
-<<<<<<< Updated upstream
-We provide two instantiations of DEQ here, based primarily on two SOTA sequence models: 1) universal transformers; 
-and 2) trellis networks. More importantly, we have separated out a framework so that it requires minimal effort to 
-try other interesting architectures/transformations beyond these two instantiations. See the README in `DEQModel/models` for more details.
 
-We also provide below URLs to the saved pre-trained models that achieve the state-of-the-art performance (e.g., 23.2 ppl on WT103).
-=======
 We provide an instantiation of DEQ for sequence modeling here, based primarily on universal transformers. More importantly, we have separated out a framework so that it requires minimal effort to 
 try other interesting architectures/transformations beyond these two instantiations. See the README in `DEQModel/models` for more details. We also provide below an URL to the saved pre-trained model that achieves the state-of-the-art level performance (e.g., 23.1 ppl on WT103).
->>>>>>> Stashed changes
 
 If you find this repository useful for your research, please consider citing our work:
 ```
@@ -60,14 +50,11 @@ All DEQ instantiations share the same underlying framework, whose core functiona
 backward pass is hidden as an inner class of `DEQModule`**. `broyden.py` provides an implementation of the Broyden's method. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in 
 `optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).
 
-<<<<<<< Updated upstream
-Training and evaluation scripts of DEQ-Transformer and DEQ-TrellisNet are provided independently, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags. For instance:
+Training and evaluation scripts of DEQ-Transformer are provided, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags. For instance:
 ```sh
 python train_transformer.py --cuda --multi_gpu --d_embed 600 --d_model 600 --pretrain_steps 20000 [...]
 ```
 
-=======
->>>>>>> Stashed changes
 #### Example Configuration Files
 We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
 ```sh
@@ -129,8 +116,6 @@ bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_
 ## Credits
 
 The transformer implementation as well as the extra modules (e.g., adaptive embeddings) were based on the [Transformer-XL](https://github.com/kimiyoung/transformer-xl) repo.
-
-The TrellisNet implementation as well as the weight-tying regularizations were based on the [TrellisNet](https://github.com/locuslab/trellisnet) repo.
 
 We also added the RAdam optimizer as an option to the training (but didn't set it to default). The RAdam implementation is from the [RAdam](https://github.com/LiyuanLucasLiu/RAdam) repo.
 
