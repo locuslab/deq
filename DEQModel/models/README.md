@@ -18,9 +18,9 @@ Typically, this is just like any deep network layer, and should be a subclass of
 ```python
 class Layer(nn.Module):
     def __init__(self, ...):
-		...
-	def forward(self, z, x, **kwargs):
-		return new_z
+	...
+    def forward(self, z, x, **kwargs):
+        return new_z
 ```
 In `deq_transformer.py`, we provide an example of this with the class `RelPartialLearnableDecoderLayer`.
 
@@ -31,8 +31,8 @@ As a DEQ model can use any *black-box* root solver, we can implement and use any
 In the DEQ network, the forward pass can then be reduced to 2 lines:
 ```python
 with torch.no_grad():
-	# x is the input injection; z0 is the initial estimate of the fixed point.
-	z_star = self.solver(lambda z: f(z, x, *args), z0, threshold=f_thres)['result']
+    # x is the input injection; z0 is the initial estimate of the fixed point.
+    z_star = self.solver(lambda z: f(z, x, *args), z0, threshold=f_thres)['result']
 ```
 where we note that the forward pass does not need to store **any** intermediate state, so we put it in a `torch.no_grad()` block. Also, note that we directly pass in the layer `f` defined in step 1, rather than the residual function `f(z)-z`.
 
@@ -45,36 +45,36 @@ A full DEQ model implementation is therefore as simple as follows:
 from solvers import anderson, broyden
 
 class DEQModel(nn.Module):
-	def __init__(self, ...):
-		super().__init__(...)
-		self.f = Layer(...)   # See step 1 above
-		self.solver = broyden
-	
-	def forward(self, x, ..., **kwargs):
-		z0 = torch.zeros(...)
+    def __init__(self, ...):
+        super().__init__(...)
+        self.f = Layer(...)   # See step 1 above
+        self.solver = broyden
+    
+    def forward(self, x, ..., **kwargs):
+        z0 = torch.zeros(...)
 
-		# Forward pass
-		with torch.no_grad():
-			z_star = self.solver(lambda z: self.f(z, x, *args), z0, threshold=f_thres)['result']   # See step 2 above
-			new_z_star = z_star
+        # Forward pass
+        with torch.no_grad():
+            z_star = self.solver(lambda z: self.f(z, x, *args), z0, threshold=f_thres)['result']   # See step 2 above
+            new_z_star = z_star
 
-		# (Prepare for) Backward pass
-		if self.training:
-			z_star.requires_grad()
-			new_z_star = self.f(z_star, x, *args)
+        # (Prepare for) Backward pass
+        if self.training:
+            z_star.requires_grad()
+            new_z_star = self.f(z_star, x, *args)
 
-			# Have to use a copy here because a hook will be applied to new_z_star (which could otherwise 
-			# cause infinite recursion)
-			z_star_copy = z_star.clone().detach().requires_grad_()
-			new_z_star_copy =  self.f(z_star_copy, x, *args)
-			def backward_hook(grad):
-				# Compute the fixed point of yJ + grad, where J=J_f is the Jacobian of f at z_star
-				new_grad = self.solver(lambda y: autograd.grad(new_z_star_copy, z_star_copy, y, retain_graph=True)[0] + grad, \
-					                   torch.zeros_like(grad), threshold=b_thres)['result']
-				return new_grad
+            # Have to use a copy here because a hook will be applied to new_z_star (which could otherwise 
+            # cause infinite recursion)
+            z_star_copy = z_star.clone().detach().requires_grad_()
+            new_z_star_copy =  self.f(z_star_copy, x, *args)
+            def backward_hook(grad):
+                # Compute the fixed point of yJ + grad, where J=J_f is the Jacobian of f at z_star
+                new_grad = self.solver(lambda y: autograd.grad(new_z_star_copy, z_star_copy, y, retain_graph=True)[0] + grad, \
+                                       torch.zeros_like(grad), threshold=b_thres)['result']
+                return new_grad
 
-			new_z_star.register_hook(backward_hook)
-		return new_z_star
+            new_z_star.register_hook(backward_hook)
+        return new_z_star
 ```
 
 ### The DEQ-Transformer Instantiation
