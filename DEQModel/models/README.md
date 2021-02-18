@@ -24,7 +24,7 @@ class Layer(nn.Module):
 ```
 In `deq_transformer.py`, we provide an example of this with the class `RelPartialLearnableDecoderLayer`.
 
-### Step 2. Prepare the fixed point solver to use for the DEQ model.**
+### Step 2. Prepare the fixed point solver to use for the DEQ model.
 
 As a DEQ model can use any *black-box* root solver, we can implement and use any solver as long as it gives us a good estimate of the fixed point. In `../modules/solvers.py`, we provide two popular & efficient fixed point solvers, which are based on [Anderson acceleration](https://en.wikipedia.org/wiki/Anderson_acceleration) and [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method), respectively. These two methods (`anderson(...)` and `broyden(...)`) outputs a dictionary that contains the basic information of the optimization process. By default, we use the *relative residual difference* (i.e., |f(z)-z|/|z|) as the criterion for stopping the iterative process.
 
@@ -36,7 +36,7 @@ with torch.no_grad():
 ```
 where we note that the forward pass does not need to store **any** intermediate state, so we put it in a `torch.no_grad()` block. Also, note that we directly pass in the layer `f` defined in step 1, rather than the residual function `f(z)-z`.
 
-### Step 3. Engage with the autodiff tape in order to use implicit differentiation**
+### Step 3. Engage with the autodiff tape in order to use implicit differentiation
 
 Finally, we need to ensure there is a way to compute the backward pass of a DEQ, which relies on implicit function theorem. To do this, we can use the `register_hook` function in PyTorch that registers a backward hook function to be executed in the backward pass. As we noted in the paper, the backward pass is simply solving for the fixed point of a *linear system* involving the Jacobian at the equilibrium. 
 
