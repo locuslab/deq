@@ -357,22 +357,9 @@ class DEQTransformerLM(nn.Module):
                 new_z1s_copy = self.func(z1s_copy, *func_args)
                 def backward_hook(grad):
                     result = self.solver(lambda y: autograd.grad(new_z1s_copy, z1s_copy, y, retain_graph=True)[0] + grad, torch.zeros_like(grad), threshold=b_thres)
-                    new_grad = result['result']
-
-                    # DELETE
-                    if z1s.get_device() == 0:
-                        stop_diff, alt_diff = result['lowest'], min(result[f'{self.alternative_mode}_trace'])
-                        if seed < 1e-1 or train_step == self.pretrain_steps:
-                            self.logging(colored(f"Backward {self.stop_mode}_diff: {stop_diff}; {self.alternative_mode}_diff: {alt_diff}; nstep: {result['nstep']}", "red"))
-
-                    return new_grad
+                    return result['result']
                 new_z1s.register_hook(backward_hook)
 
-            # DELETE
-            if new_z1s.get_device() == 0:
-                stop_diff, alt_diff = result['lowest'], min(result[f'{self.alternative_mode}_trace'])
-                if (seed < 1e-1 or train_step == self.pretrain_steps):
-                    self.logging(colored(f"Forward {self.stop_mode}_diff: {stop_diff}; {self.alternative_mode}_diff: {alt_diff}; nstep: {result['nstep']}", "yellow"))
         core_out = self.iodrop(new_z1s, self.dropout).permute(2,0,1).contiguous()       # qlen x bsz x d_model
         new_mems = self._update_mems(new_z1s, us, z0, mlen, qlen)
         return core_out, new_mems
