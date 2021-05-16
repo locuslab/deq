@@ -353,12 +353,16 @@ class DEQTransformerLM(nn.Module):
                 z1s.requires_grad_()
                 new_z1s = self.func(z1s, *func_args)
 
-                z1s_copy = z1s.clone().detach().requires_grad_()
-                new_z1s_copy = self.func(z1s_copy, *func_args)
+                # z1s_copy = z1s.clone().detach().requires_grad_()
+                # new_z1s_copy = self.func(z1s_copy, *func_args)
                 def backward_hook(grad):
-                    result = self.solver(lambda y: autograd.grad(new_z1s_copy, z1s_copy, y, retain_graph=True)[0] + grad, torch.zeros_like(grad), threshold=b_thres)
+                    if self.hook is not None:
+                        self.hook.remove()
+                        torch.cuda.synchronize()
+                    # result = self.solver(lambda y: autograd.grad(new_z1s_copy, z1s_copy, y, retain_graph=True)[0] + grad, torch.zeros_like(grad), threshold=b_thres)
+                    result = self.solver(lambda y: autograd.grad(new_z1s, z1s, y, retain_graph=True)[0] + grad, torch.zeros_like(grad), threshold=b_thres)
                     return result['result']
-                new_z1s.register_hook(backward_hook)
+                self.hook = new_z1s.register_hook(backward_hook)
 
         core_out = self.iodrop(new_z1s, self.dropout).permute(2,0,1).contiguous()       # qlen x bsz x d_model
         new_mems = self._update_mems(new_z1s, us, z0, mlen, qlen)
