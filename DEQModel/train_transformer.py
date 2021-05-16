@@ -470,7 +470,7 @@ def train():
                     with open(os.path.join(args.work_dir, 'model.pt'), 'wb') as f:
                         print(f'Saved Model! Experiment name: {args.name}')
                         torch.save(model, f)
-                        model.save_weights(args.name)
+                        model.save_weights(args.work_dir, 'model_state_dict')
                     with open(os.path.join(args.work_dir, 'optimizer.pt'), 'wb') as f:
                         torch.save(optimizer.state_dict(), f)
                 best_val_loss = val_loss
@@ -483,7 +483,7 @@ def train():
         
         if train_step == args.pretrain_steps and (args.pretrain_steps - args.start_train_steps) > 4000:
             print("You are using pre-training, which has completed :-)")
-            model.save_weights(f"pretrain_{train_step}_{args.name}")
+            model.save_weights(args.work_dir, f"pretrain_{train_step}_{args.name}")
             torch.cuda.empty_cache()
             
         if train_step == args.max_step:
