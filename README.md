@@ -1,7 +1,9 @@
 # Deep Equilibrium Models
 
 ### News
-**2020/12: For those who would like to start with a toy version of the DEQ (with much simpler implementation than in this repo), the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction to how to build, train and use a DEQ model: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).**
+**2021/5: We strongly recommend using the `beta` branch of this repo for running DEQ models. It significantly simplified the implicit differentiation portion of the implementation, with the memory consumption further halved. In the coming few weeks, we will make the `beta` branch the new `master` branch and archive the current branch. In the near future, the [MDEQ](https://github.com/locuslab/mdeq) repo will also be merged with this repo (and no longer be maintained).**
+
+2020/12: For those who would like to start with a toy version of the DEQ (with much simpler implementation than in this repo), the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction to how to build, train and use a DEQ model: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
 
 2020/10: A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).
 
