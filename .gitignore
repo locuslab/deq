@@ -7,11 +7,16 @@ data/
 .DS_Store/
 __pycache__/
 *.pt
+*.pth
 .idea/
-LM*/
 copy_memory/
 submissions/
 Mess/
 .ipynb_checkpoint/
 *.ipynb
 runs/
+private_*
+*_old/
+log/
+DEQ-Sequence/LM*/
+MDEQ-Vision/output/

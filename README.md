@@ -2,28 +2,151 @@
 
 ### News
 
-2021/2: We provide a much cleaner version of DEQ-Transformer here, without all the copying/cloning/DummyBackward "tricks" in the original implementation. However, note that we have not fully tested out the cleaner implementation on all settings reported in the paper (e.g., Transformers of different scales; TrellisNet; etc.). The new implementation is inspired by the [NeurIPS 2020 Deep Implicit Layer Tutorial](http://implicit-layers-tutorial.org/).
+**2021/6: Repo updated with the multiscale DEQ (MDEQ) code, Jacobian-related analysis & regularization support, and the new, faster and simpler implicit differentiation implementation through PyTorch's backward hook!**
 
-2020/12: For those who would like to start with a toy version of the DEQ (with much simpler implementation than in this repo), the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction to how to build, train and use a DEQ model: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
+- For those who would like to start with a toy version of the DEQ, the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
 
-2020/10: A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).
+- A [JAX](https://github.com/google/jax) version of the DEQ, including JAX implementation of Broyden's method, etc. is available [here](https://github.com/akbir/deq-jax).
 
 ---
 
-This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
+This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture that directly solves for and backpropagtes through the (fixed-point) equilibrium state of an (effectively) infinitely deep network. Importantly, compared to prior implicit-depth approaches (e.g., ODE-based methods), in this work we also demonstrate the potential power and compatibility of this implicit model with modern, structured layers like Transformers, which enable the DEQ networks to achieve results on par with the SOTA deep networks *without* using a "deep" stacking (and thus O(1) memory). Moreover, we also provide tools for regularizing the stability of these implicit models.
 
-Unlike many existing "deep" techniques, the DEQ model is a implicit-depth architecture that directly solves for and
-backpropagates through the equilibrium state of an (effectively) infinitely deep network. Importantly, compared to 
-prior implicit-depth approaches (e.g., ODE-based methods), in this work we also demonstrate the potential power and 
-applicability of such models on practical, large-scale and high-dimensional sequence datasets. On these large-scale 
-datasets, (carefully designed) DEQ models can acheive results on par with (or slightly better than) the SOTA 
-deep networks, while not using a "deep" stacking (and with only O(1) memory). 
+This repo contains the code from the following papers (see `bibtex` at the end of this README):
+  - [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377)
+  - [Multiscale Deep Equilibrium Models](https://arxiv.org/abs/2006.08656)
+  - [Stabilizing Equilibrium Models by Jacobian Regularization](https://arxiv.org/abs/2106.14342).
 
+## Prerequisite
 
-We provide an instantiation of DEQ for sequence modeling here, based primarily on universal transformers. More importantly, we have separated out a framework so that it requires minimal effort to 
-try other interesting architectures/transformations beyond these two instantiations. See the README in `DEQModel/models` for more details. We also provide below an URL to the saved pre-trained model that achieves the state-of-the-art level performance (e.g., 23.1 ppl on WT103).
+Python >= 3.5 and PyTorch >= 1.5.0. 4 GPUs strongly recommended for computational efficiency.
 
-If you find this repository useful for your research, please consider citing our work:
+## Data
+
+We provide more detailed instructions for downloading/processing the datasets (WikiText-103, ImageNet, Cityscapes, etc.) in the `DEQ-Sequence/` and `MDEQ-Vision/` subfolders.
+
+## How to build/train a DEQ model?
+
+Starting in 2021/6, we partition the repo into two sections, containing the sequence-model DEQ (i.e., `DEQ-Sequence/`) and the vision-model DEQ (i.e., `MDEQ-Vision/`) networks, respectively. As these two tasks require different input processing and loss objectives, they do not directly share the training framework. 
+
+However, both frameworks share the same utility code, such as:
+  - `lib/solvers.py`: Advanced fixed-point solvers (e.g., Anderson acceleration and Broyden's method)
+  - `lib/jacobian.py`: Jacobian-related estimations (e.g., Hutchinson estimator and the Power method)
+  - `lib/optimization.py`: Regularizations (e.g., weight normalization and variational dropout)
+  - `lib/layer_utils.py`: Layer utilities
+
+Moreover, the repo is significantly simplified from the previous version for users to extend on it. In particular, 
+
+>**Theorem 2 (Universality of "single-layer" DEQs, very informal)**: Stacking multiple DEQs 
+> (with potentially _different_ classes of transformations) does not create extra representational
+> power over a single DEQ.
+
+(See the paper for a formal statement.) By the theorem above, designing a better DEQ model boils down to designing a better stable transformation f_\theta. Creating and playing with a DEQ is **easy**, and we recommend following 3 steps (which we adopt in this repo):
+
+### Step 1: Defining a layer `f=f_\theta` that we'd like to iterate until equilibrium.
+
+Typically, this is just like any deep network layer, and should be a subclass of `torch.nn.Module`. Evaluating this layer requires the hidden unit `z` and the input injection `x`; e.g.:
+```python
+class Layer(nn.Module):
+    def __init__(self, ...):
+	...
+    def forward(self, z, x, **kwargs):
+        return new_z
+```
+
+### Step 2: Prepare the fixed point solver to use for the DEQ model.
+
+As a DEQ model can use any *black-box* root solver. We provide PyTorch fixed-point solver implementations `anderson(...)` and `broyden(...)` in `lib/solvers.py` that output a dictionary containing the basic information of the optimization process. By default, we use the *relative residual difference* (i.e., |f(z)-z|/|z|) as the criterion for stopping the iterative process.
+
+The forward pass can then be reduced to 2 lines:
+```python
+with torch.no_grad():
+    # x is the input injection; z0 is the initial estimate of the fixed point.
+    z_star = self.solver(lambda z: f(z, x, *args), z0, threshold=f_thres)['result']
+```
+where we note that the forward pass does not need to store **any** intermediate state, so we put it in a `torch.no_grad()` block.
+
+### Step 3: Engage with the autodiff tape to use implicit differentiation
+
+Finally, we need to ensure there is a way to compute the backward pass of a DEQ, which relies on implicit function theorem. To do this, we can use the `register_hook` function in PyTorch that registers a backward hook function to be executed in the backward pass. As we noted in the paper, the backward pass is simply solving for the fixed point of a *linear system* involving the Jacobian at the equilibrium:
+```python
+new_z_star = self.f(z_star.requires_grad_(), x, *args)
+
+def backward_hook(grad):
+    if self.hook is not None:
+        self.hook.remove()
+        torch.cuda.synchronize()   # To avoid infinite recursion
+    # Compute the fixed point of yJ + grad, where J=J_f is the Jacobian of f at z_star
+    new_grad = self.solver(lambda y: autograd.grad(new_z_star, z_star, y, retain_graph=True)[0] + grad, \
+                           torch.zeros_like(grad), threshold=b_thres)['result']
+    return new_grad
+
+self.hook = new_z_star.register_hook(backward_hook)
+```
+
+### (Optional) Additional Step: Jacobian Regularization.
+
+The fixed-point formulation of DEQ models means their stability are directly characterized by the Jacobian matrix `J_f` at the equilibrium point. Therefore, we provide code for analyzing and regularizing the Jacobian properties (based on the ICML'21 paper [Stabilizing Equilibrium Models by Jacobian Regularization](https://arxiv.org/abs/2106.14342)). Specifically, we added the following flags to the training script:
+
+  - `jac_loss_weight`: The strength of Jacobian regularization, where we regularize `||J_f||_F`.
+  - `jac_loss_freq`: The frequency `p` of the stochastic Jacobian regularization (i.e., we only apply this loss with probaility `p` during training).
+  - `jac_incremental`: If >0, then we increase the `jac_loss_weight` by 0.1 after every `jac_incremental` training steps.
+  - `spectral_radius_mode`: If `True`, estimate the DEQ models' spectral radius when evaluating on the validation set.
+
+A full DEQ model implementation is therefore as simple as follows:
+```python
+from lib.solvers import anderson, broyden
+from lib.jacobian import jac_loss_estimate
+
+class DEQModel(nn.Module):
+    def __init__(self, ...):
+        ...
+    
+    def forward(self, x, ..., **kwargs):
+        z0 = torch.zeros(...)
+
+        # Forward pass
+        with torch.no_grad():
+            z_star = self.solver(lambda z: self.f(z, x, *args), z0, threshold=f_thres)['result']   # See step 2 above
+            new_z_star = z_star
+
+        # (Prepare for) Backward pass, see step 3 above
+        if self.training:
+            new_z_star = self.f(z_star.requires_grad_(), x, *args)
+            
+            # Jacobian-related computations, see additional step above. For instance:
+            jac_loss = jac_loss_estimate(new_z_star, z_star, vecs=1)
+
+            def backward_hook(grad):
+                if self.hook is not None:
+                    self.hook.remove()
+                    torch.cuda.synchronize()   # To avoid infinite recursion
+                # Compute the fixed point of yJ + grad, where J=J_f is the Jacobian of f at z_star
+                new_grad = self.solver(lambda y: autograd.grad(new_z_star, z_star, y, retain_graph=True)[0] + grad, \
+                                       torch.zeros_like(grad), threshold=b_thres)['result']
+                return new_grad
+
+            self.hook = new_z_star.register_hook(backward_hook)
+        return new_z_star, ...
+```
+
+## Pretrained Models
+
+See `DEQ-Sequence/` and `MDEQ-Vision/` sub-directories.
+
+## Credits
+
+- The transformer implementation as well as the extra modules (e.g., adaptive embeddings) were based on the [Transformer-XL](https://github.com/kimiyoung/transformer-xl) repo.
+
+- Some utilization code (e.g., model summary and yaml processing) of this repo were modified from the [HRNet](https://github.com/HRNet/HRNet-Semantic-Segmentation) repo.
+
+- We also added the RAdam optimizer as an option to the training (but didn't set it to default). The RAdam implementation is from the [RAdam](https://github.com/LiyuanLucasLiu/RAdam) repo.
+
+## Bibtex
+
+If you find this repository useful for your research, please consider citing our work(s):
+
+1. Deep Equilibrium Models
 ```
 @inproceedings{bai2019deep,
   author    = {Shaojie Bai and J. Zico Kolter and Vladlen Koltun},
@@ -33,95 +156,24 @@ If you find this repository useful for your research, please consider citing our
 }
 ```
 
-## News
-
-2020/2: Following the suggestions of many researchers, we have made a major update to the repo that significantly clarifies implementation structure of DEQ. Unlike the previous version (where `DEQFunc` and `DummyDEQFunc` could be confusing), both the forward and backward functionalities of DEQ are wrapped in the `DEQModule` class in file `module/deq.py`.
-
-## Prerequisite
-
-Python >= 3.5 and PyTorch >= 1.4.0. 4 GPUs strongly recommended for computational efficiency (although you could still fit in 1 GPU if needed).
-
-## Data
-
-You can download the dataset using 
-```sh
-bash get_data.sh
+2. Multiscale Deep Equilibrium Models
+```
+@inproceedings{bai2020multiscale,
+  author    = {Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  title     = {Multiscale Deep Equilibrium Models},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020},
+}
 ```
 
-## Usage
-
-All DEQ instantiations share the same underlying framework, whose core functionalities are provided in `DEQModel/modules`. In particular, `solvers.py` provides an implementation of the Broyden's method and Anderson acceleration. Meanwhile, numerous regularization techniques (weight normalization, variational dropout, etc.) are provided in 
-`optimizations.py` (heavily borrowed from the [TrellisNet](https://github.com/locuslab/trellisnet) repo).
-
-Training and evaluation scripts of DEQ-Transformer are provided, in `DEQModel/train_[MODEL_NAME].py`. Most of the hyperparameters can be (and **should be**) tuned via the `argparse` flags. For instance:
-```sh
-python train_transformer.py --cuda --multi_gpu --d_embed 600 --d_model 600 --pretrain_steps 20000 [...]
+3. Stabilizing Equilibrium Models by Jacobian Regularization
 ```
-
-#### Example Configuration Files
-We also provide some sample scripts that run on 4-GPU machines (see `run_wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
-```sh
-bash run_wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40 --solver broyden
+@inproceedings{bai2021stabilizing,
+  title     ={Stabilizing Equilibrium Models by Jacobian Regularization},
+  autho     ={Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  booktitle ={International Conference on Machine Learning (ICML)},
+  year      ={2021}
+}
 ```
-**You should expect to get a test-set perplexity around 23.8 with this setting.**
-
-The current repo contains the code/config files for the large-scale WikiText-103 language corpus. We will soon add the Penn TreeBank experiment and the copy memory task (which were also used in the paper).
-
-#### File Structure
-
-The files in this repo are organized in the following manner:
-
-```
-DEQModel/
-  models/
-    transformers/
-  modules/
-     (Equilibrium solvers as well as regularization files)
-  utils/
-     (Extra language model related files, such as adaptive embeddings, etc.)
-  LM-[...]deq-wt103/
-     (All logs of the training, where [...] is the architecture type)
-```
-
-#### Pre-trained Models
-
-We provide some reasonably good pre-trained weights here so that one can quickly play with DEQs without training from scratch.
-
-| Description   | Task              | Dataset             | Model                                      | Expected Performance    |
-| ------------- | ----------------- | ------------------- | ------------------------------------------ | ----------------------- |
-| DEQ-Transformer | Word-Level Language Modeling | WikiText-103 | [download (.pkl)](https://drive.google.com/file/d/1lZx_sHt0-1gJVgXx90LDRizq3k-ZI0SW/view?usp=sharing) |   23.2 Perplexity   |
-
-(more to come)
-
-To evaluate a trained model, simply use the `--load` flag and the `--eval` flag. Using the pretrained DEQ-Transformer on WT103 as an example (with the default parameters), with which you should expect to get a 23.2 ppl (outperforming Transformer-XL's 23.6 ppl):
-
-```
-bash run_wt103_deq_transformer.sh train --f_thres 30 --eval --load [SAVED_MODEL_NAME].pkl --mem_len 300 --pretrain_step 0
-```
-(i.e., at inference time, set the augmented memory size to 300, and perform equilibrium solving on a sequence of length 75 each time (which you can adjust).)
-
-
-## Tips
-
-1. It is not easy to train a DEQ without knowing which hyperparameters you need to pay special attention to. Generally, the importance of these hyperparameters depend on the transformation f_\theta you choose for the architecture. For instance, each layer of the Transformer has a *much* larger receptive field than that of a TrellisNet, so we have observed that TrellisNet typically requires more Broyden steps to converge to the equilibrium (which means the Broyden iteration limit is typically larger).
-
-2. Empirically, we find that training with subsequences makes the equilibrium solving process slightly more stable (especially when dealing with extremely long sequences). See the appendix in the paper for more details.
-
-3. For most of the time, pre-training the model with a very shallow network (e.g., a 2-layer network) for a while (e.g., 10-20% of the total training steps/epochs) can be helpful, as it makes f_\theta more stable. However, note that these shallow networks themselves usually achieve very bad results on their own (e.g., imagine a 10-layer weight-tied temporal convolution).
-
-4. Patience. As the paper discusses, DEQ models could be (sometimes much) slower than the corresponding "conventional" deep networks :P
-
-5. Variational dropout typically makes equilibrium states harder to find. However, empirically, we find them to be extremely useful regularizations to these weight-tied models.
-
-6. You can vary factors such as `--mem_len` and `--f_thres` at inference time. As we show in the paper, more Broyden/Anderson steps typically yields (diminishingly) better results. Moreover, as DEQ only has "one layer", storage cost of the cached history sequence of size `--mem_len` is actually very cheap.
-
-
-## Credits
-
-The transformer implementation as well as the extra modules (e.g., adaptive embeddings) were based on the [Transformer-XL](https://github.com/kimiyoung/transformer-xl) repo.
-
-We also added the RAdam optimizer as an option to the training (but didn't set it to default). The RAdam implementation is from the [RAdam](https://github.com/LiyuanLucasLiu/RAdam) repo.
-
-
 
 

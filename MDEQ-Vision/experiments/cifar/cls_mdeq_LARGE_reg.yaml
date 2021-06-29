@@ -1,0 +1,93 @@
+GPUS: (0,)
+LOG_DIR: 'log/'
+DATA_DIR: ''
+OUTPUT_DIR: 'output/'
+WORKERS: 2
+PRINT_FREQ: 100
+
+MODEL: 
+  NAME: mdeq
+  NUM_LAYERS: 8
+  NUM_CLASSES: 10
+  NUM_GROUPS: 8
+  DROPOUT: 0.22
+  WNORM: true
+  DOWNSAMPLE_TIMES: 0
+  EXPANSION_FACTOR: 5
+  POST_GN_AFFINE: false
+  IMAGE_SIZE: 
+    - 32
+    - 32
+  EXTRA:
+    FULL_STAGE:
+      NUM_MODULES: 1
+      NUM_BRANCHES: 4
+      BLOCK: BASIC
+      BIG_KERNELS:
+      - 0
+      - 0
+      - 0
+      - 0
+      HEAD_CHANNELS:
+      - 14
+      - 28
+      - 56
+      - 112
+      FINAL_CHANSIZE: 1680
+      NUM_BLOCKS:
+      - 1
+      - 1
+      - 1
+      - 1
+      NUM_CHANNELS:
+      - 32
+      - 64
+      - 128
+      - 256
+      FUSE_METHOD: SUM
+DEQ:
+  F_SOLVER: 'broyden'
+  B_SOLVER: 'broyden'
+  STOP_MODE: 'rel'
+  F_THRES: 8
+  B_THRES: 7
+  RAND_F_THRES_DELTA: 2
+  SPECTRAL_RADIUS_MODE: false
+CUDNN:
+  BENCHMARK: true
+  DETERMINISTIC: false
+  ENABLED: true
+LOSS:
+  JAC_LOSS_FREQ: 0.02
+  JAC_LOSS_WEIGHT: 0.4
+  PRETRAIN_JAC_LOSS_WEIGHT: 0.0
+  JAC_STOP_EPOCH: 90
+DATASET:
+  DATASET: 'cifar10'
+  DATA_FORMAT: 'jpg'
+  ROOT: 'data/cifar10/'
+  TEST_SET: 'val'
+  TRAIN_SET: 'train'
+TEST:
+  BATCH_SIZE_PER_GPU: 96
+  MODEL_FILE: ''
+TRAIN:
+  BATCH_SIZE_PER_GPU: 96
+  BEGIN_EPOCH: 0
+  END_EPOCH: 220
+  RESUME: false
+  LR_SCHEDULER: 'cosine'
+  PRETRAIN_STEPS: 16000
+  LR_FACTOR: 0.1
+  LR_STEP:
+  - 30
+  - 60
+  - 90
+  OPTIMIZER: adam
+  LR: 0.001
+  WD: 0.0
+  MOMENTUM: 0.98
+  NESTEROV: true
+  SHUFFLE: true
+DEBUG:
+  DEBUG: false

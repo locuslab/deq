@@ -1,0 +1,93 @@
+GPUS: (0,1,2,3)
+LOG_DIR: 'log/'
+DATA_DIR: ''
+OUTPUT_DIR: 'output/'
+WORKERS: 12
+PRINT_FREQ: 1000
+
+MODEL: 
+  NAME: mdeq
+  NUM_LAYERS: 5
+  NUM_CLASSES: 1000
+  NUM_GROUPS: 8
+  DROPOUT: 0.02
+  WNORM: true
+  DOWNSAMPLE_TIMES: 2
+  EXPANSION_FACTOR: 5
+  POST_GN_AFFINE: false
+  IMAGE_SIZE: 
+    - 224
+    - 224
+  EXTRA:
+    FULL_STAGE:
+      NUM_MODULES: 1
+      NUM_BRANCHES: 4
+      BLOCK: BASIC
+      BIG_KERNELS:
+      - 0
+      - 0
+      - 0
+      - 0
+      HEAD_CHANNELS:
+      - 28
+      - 56
+      - 112
+      - 224
+      FINAL_CHANSIZE: 2048
+      NUM_BLOCKS:
+      - 1
+      - 1
+      - 1
+      - 1
+      NUM_CHANNELS:
+      - 32
+      - 64
+      - 128
+      - 256
+      FUSE_METHOD: SUM
+DEQ:
+  F_SOLVER: 'broyden'
+  B_SOLVER: 'broyden'
+  STOP_MODE: 'abs'
+  F_THRES: 14
+  B_THRES: 14
+  RAND_F_THRES_DELTA: 2
+  SPECTRAL_RADIUS_MODE: false
+CUDNN:
+  BENCHMARK: true
+  DETERMINISTIC: false
+  ENABLED: true
+LOSS:
+  JAC_LOSS_FREQ: 0.08
+  JAC_LOSS_WEIGHT: 2.5
+  JAC_INCREMENTAL: 50000
+  PRETRAIN_JAC_LOSS_WEIGHT: 0.03
+DATASET:
+  DATASET: 'imagenet'
+  DATA_FORMAT: 'jpg'
+  ROOT: '../../mdeq/data/imagenet'
+  TEST_SET: 'val'
+  TRAIN_SET: 'train'
+TEST:
+  BATCH_SIZE_PER_GPU: 32
+  MODEL_FILE: ''
+TRAIN:
+  BATCH_SIZE_PER_GPU: 32
+  BEGIN_EPOCH: 0
+  END_EPOCH: 100
+  RESUME: true
+  LR_SCHEDULER: 'cosine'
+  PRETRAIN_STEPS: 510000
+  LR_FACTOR: 0.1
+  LR_STEP:
+  - 30
+  - 60
+  - 90
+  OPTIMIZER: sgd
+  LR: 0.04
+  WD: 0.00002
+  MOMENTUM: 0.9
+  NESTEROV: true
+  SHUFFLE: true
+DEBUG:
+  DEBUG: false
