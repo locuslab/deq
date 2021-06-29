@@ -25,16 +25,6 @@ def jac_loss_estimate(f0, z0, vecs=2, create_graph=True):
         result += vJ.norm()**2
     return result / vecs / np.prod(z0.shape)
 
-def lipschitz_estimate(f0, z0, create_graph=True):
-    """The method of Linsley et al. 2020, "Stable and expressive recurrent vision models"."""
-
-    # Their Lipschitz Coefficient Penalty (LCP) essentially performs ||(1^T J - \lambda)^+||,
-    # but this is NOT a strict bound. E.g., if J = [[-2,2],[2,-2]], then LCP = 0 yet the 
-    # spectral radius of J is not bounded at all.
-    v = torch.ones(*z0.shape).to(z0)
-    vJ = torch.autograd.grad(f0, z0, v, retain_graph=True, create_graph=create_graph)[0]
-    return F.relu(vJ - 0.9).norm() / np.sqrt(np.prod(z0.shape))
-
 def power_method(f0, z0, n_iters=200):
     """Estimating the spectral radius of J using power method
 
