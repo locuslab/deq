@@ -4,7 +4,7 @@
 
 ## News
 
-:boom:**2021/6: Repo updated with the multiscale DEQ (MDEQ) code, Jacobian-related analysis & regularization support, and the new, faster and simpler implicit differentiation implementation through PyTorch's backward hook!**
+:boom:**2021/6: Repo updated with the multiscale DEQ (MDEQ) code, Jacobian-related analysis & regularization support, and the new, faster and simpler implicit differentiation implementation through PyTorch's backward hook! (See [here](https://github.com/locuslab/deq#how-to-buildtrain-a-deq-model).)**
 
 - For those who would like to start with a toy version of the DEQ, the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
 
