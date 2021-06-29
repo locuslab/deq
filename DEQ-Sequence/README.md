@@ -1,4 +1,4 @@
-# Deep Equilibrium (DEQ) Transformer Models
+# Deep Equilibrium (DEQ) Sequence Models
 
 This repository __mainly__ contains the code for the deep equilibrium transformer (DEQ-Transformer) model proposed in the paper [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377) by Shaojie Bai, J. Zico Kolter and Vladlen Koltun.
 
@@ -15,12 +15,16 @@ If you find thie repository useful for your research, please consider citing our
 }
 
 @inproceedings{bai2021stabilizing,
-  title     ={Stabilizing Equilibrium Models by Jacobian Regularization},
-  autho     ={Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
-  booktitle ={International Conference on Machine Learning (ICML)},
-  year      ={2021}
+  title     = {Stabilizing Equilibrium Models by Jacobian Regularization},
+  author    = {Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2021}
 }
 ```
+
+### Requirements
+
+PyTorch >=1.5.0, torchvision >= 0.4.0 recommended
 
 ### Dataset
 
@@ -43,18 +47,20 @@ For sequence modeling in particular, the default arguments to pass into the DEQ 
 ```
 In many cases, other arguments may be needed to compute the equilibrium (e.g., in transformers, positional encoding is critical). One can pass them in via the `*args` in the function statement.
 
-##### Train a DEQ-Transformer model on Wikitext-103 Dataset
+##### 1. Train a DEQ-Transformer model on Wikitext-103 Dataset
 
 You first need to download the dataset (see above). We also provide some sample scripts that run on 4-GPU machines (see `wt103_deq_[...].sh`). To execute these scripts, one can run (e.g. for a transformer with forward Broyden iteration limit set to 30):
 ```sh
-bash wt103_deq_transformer.sh train --cuda --multi_gpu --f_thres 30 --b_thres 40
+bash wt103_deq_transformer.sh train --cuda --multi_gpu --f_solver broyden --f_thres 30 --b_thres 40
 ```
 **You should expect to get a test-set perplexity around 23.8 with this setting.**
 
-##### Jacobian regularization
+In this v2.0 DEQ repo, we now support both Broyden's method and Anderson acceleration methods for solving the fixed point, and one can choose different solvers for forward and backward processes. For example, to use Anderson in forward and Broyden in backward, one can simply do `--f_solver anderson --b_solver broyden`.
+
+##### 2. Jacobian regularization
 We also provide additional support for regularizing the stability of the MDEQ models. Specifically, we can do this efficiently by regularizing `||J_f||_F` at the equilibrium point (which characterizes fixed point models' stability) using the Hutchinson estimator. In practice, we can apply this regularization stochastically and adjust its strength dynamically. Please refer to the [Stabilizing Equilibrium Models by Jacobian Regularization](https://arxiv.org/abs/2106.14342) paper for more details.
 
-The "regularized" version scripts are named `wt103_[...]_reg.sh`; and the pre-ln Transformer setting is named explicitly with `[...]_preln_reg.sh`. When training the model, the Jacobian regularization settings should be tuned and controlled entirely by the `argparse` options (see the main `README`), such as `--jac_loss_weight`. 
+The "regularized" version scripts are named `wt103_[...]_reg.sh`; and the pre-ln Transformer setting is named explicitly with `[...]_preln_reg.sh`. When training the model, the Jacobian regularization settings should be tuned and controlled entirely by the `argparse` options (see the main `README` in the upper level directory), such as `--jac_loss_weight`. 
 
 ### Pre-trained Models
 

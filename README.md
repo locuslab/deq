@@ -1,8 +1,10 @@
 # Deep Equilibrium Models
 
-### News
+> (Version 2.0)
 
-**2021/6: Repo updated with the multiscale DEQ (MDEQ) code, Jacobian-related analysis & regularization support, and the new, faster and simpler implicit differentiation implementation through PyTorch's backward hook!**
+## News
+
+:boom:**2021/6: Repo updated with the multiscale DEQ (MDEQ) code, Jacobian-related analysis & regularization support, and the new, faster and simpler implicit differentiation implementation through PyTorch's backward hook!**
 
 - For those who would like to start with a toy version of the DEQ, the NeurIPS 2020 tutorial on "Deep Implicit Layers" has a detailed step-by-step introduction: [tutorial video & colab notebooks here](http://implicit-layers-tutorial.org/).
 
@@ -10,9 +12,9 @@
 
 ---
 
-This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture that directly solves for and backpropagtes through the (fixed-point) equilibrium state of an (effectively) infinitely deep network. Importantly, compared to prior implicit-depth approaches (e.g., ODE-based methods), in this work we also demonstrate the potential power and compatibility of this implicit model with modern, structured layers like Transformers, which enable the DEQ networks to achieve results on par with the SOTA deep networks *without* using a "deep" stacking (and thus O(1) memory). Moreover, we also provide tools for regularizing the stability of these implicit models.
+This repository contains the code for the deep equilibrium (DEQ) model, an implicit-depth architecture that directly solves for and backpropagtes through the (fixed-point) equilibrium state of an (effectively) infinitely deep network. Importantly, compared to prior implicit-depth approaches (e.g., ODE-based methods), in this work we also demonstrate the potential power and compatibility of this implicit model with modern, structured layers like Transformers, which enable the DEQ networks to achieve results on par with the SOTA deep networks (in NLP and vision) *without* using a "deep" stacking (and thus O(1) memory). Moreover, we also provide tools for regularizing the stability of these implicit models.
 
-This repo contains the code from the following papers (see `bibtex` at the end of this README):
+Specifically, this repo contains the code from the following papers (see `bibtex` at the end of this README):
   - [Deep Equilibrium Models](https://arxiv.org/abs/1909.01377)
   - [Multiscale Deep Equilibrium Models](https://arxiv.org/abs/2006.08656)
   - [Stabilizing Equilibrium Models by Jacobian Regularization](https://arxiv.org/abs/2106.14342).

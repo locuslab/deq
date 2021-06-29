@@ -17,13 +17,12 @@ If you find thie repository useful for your research, please consider citing our
 }
 
 @inproceedings{bai2021stabilizing,
-  title     ={Stabilizing Equilibrium Models by Jacobian Regularization},
-  autho     ={Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
-  booktitle ={International Conference on Machine Learning (ICML)},
-  year      ={2021}
+  title     = {Stabilizing Equilibrium Models by Jacobian Regularization},
+  author    = {Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2021}
 }
 ```
-
 
 ### Overview
 
@@ -64,16 +63,16 @@ data/
 
 ### Usage
 
-All experiment settings are provided in the `.yaml` files under the `experiments/` folder. 
+All experiment settings are provided in the `.yaml` files under the `experiments/` folder. Note that starting in the v2.0 DEQ repo, we support both Broyden's method and Anderson acceleration methods for solving the fixed point, and one can choose different solvers for forward and backward processes. For example, to use Anderson in forward and Broyden in backward, one can simply set `F_SOLVER` to `'anderson'` and `B_SOLVER` to `'broyden'` in the `.yaml` files.
 
-##### Train on image classification
+##### 1. Train on image classification
 To train an MDEQ classification model on ImageNet/CIFAR-10, do
 
 ```sh
 python tools/cls_train.py --cfg experiments/[DATASET_NAME]/[CONFIG_FILE_NAME].yaml
 ```
 
-##### Train on semantic segmentation
+##### 2. Train on semantic segmentation
 To train an MDEQ segmentation model on Cityscapes, do
 
 ```sh
@@ -81,7 +80,7 @@ python -m torch.distributed.launch --nproc_per_node=4 tools/seg_train.py --cfg e
 ```
 where you should provide the pretrained ImageNet model path in the corresponding configuration (`.yaml`) file. We provide a sample pretrained model extractor in `pretrained_models/`, but you can also write your own script.
 
-##### Generate segmentation results
+##### 3. Generate segmentation results
 Similarly, to test the model and generate segmentation results on Cityscapes, do
 
 ```sh
@@ -89,7 +88,7 @@ python tools/seg_test.py --cfg experiments/[DATASET_NAME]/[CONFIG_FILE_NAME].yam
 ```
 You can (and probably should) initiate the Cityscapes training with an ImageNet-pretrained MDEQ. You need to extract the state dict from the ImageNet checkpointed model, and set the `MODEL.PRETRAINED` entry in Cityscapes yaml file to this state dict on disk.
 
-##### Jacobian regularization
+##### 4. Jacobian regularization
 We also provide additional support for regularizing the stability of the MDEQ models. Specifically, we can do this efficiently by regularizing `||J_f||_F` at the equilibrium point (which characterizes fixed point models' stability) using the Hutchinson estimator. In practice, we can apply this regularization stochastically and adjust its strength dynamically. Please refer to the [Stabilizing Equilibrium Models by Jacobian Regularization](https://arxiv.org/abs/2106.14342) paper for more details.
 
 The "regularized" version yaml settings are named `[CONFIG_FILE_NAME]_reg.yaml` (e.g., `experiments/cifar/cls_mdeq_LARGE_reg.yaml`). These Jacobian-related analysis/regularizations are controlled by the following entries:
