@@ -103,6 +103,9 @@ from lib.jacobian import jac_loss_estimate
 class DEQModel(nn.Module):
     def __init__(self, ...):
         ...
+        self.f = Layer(...)
+        self.solver = broyden
+        ...
     
     def forward(self, x, ..., **kwargs):
         z0 = torch.zeros(...)
@@ -132,9 +135,22 @@ class DEQModel(nn.Module):
         return new_z_star, ...
 ```
 
+## Fixed-point Solvers
+
+We provide PyTorch implementation of two generic solvers, `broyden(...)` (based on Broyden's method) and `anderson(...)` (based on Anderson acceleration) in `lib/solvers.py`. Both functions take in the transformation `f` whose fixed point we would like to solve for, and returns a dictionary of the following format:
+```
+{
+ "result": ... (The closest estimate to the fixed point),
+ "nstep": ... (The step that gives us this closest estimate),
+ "abs_trace": ... (Absolute residuals along the trajectory),
+ "rel_trace": ... (Relative residuals along the trajectory),
+ ...
+}
+```
+
 ## Pretrained Models
 
-See `DEQ-Sequence/` and `MDEQ-Vision/` sub-directories.
+See `DEQ-Sequence/` and `MDEQ-Vision/` sub-directories for the links.
 
 ## Credits
 
@@ -171,10 +187,10 @@ If you find this repository useful for your research, please consider citing our
 3. Stabilizing Equilibrium Models by Jacobian Regularization
 ```
 @inproceedings{bai2021stabilizing,
-  title     ={Stabilizing Equilibrium Models by Jacobian Regularization},
-  autho     ={Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
-  booktitle ={International Conference on Machine Learning (ICML)},
-  year      ={2021}
+  title     = {Stabilizing Equilibrium Models by Jacobian Regularization},
+  author    = {Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2021}
 }
 ```
 
