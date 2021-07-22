@@ -12,7 +12,7 @@ sys.path.append('../../')
 
 from lib.optimizations import weight_norm, VariationalDropout, VariationalHidDropout, VariationalAttnDropout
 from lib.solvers import anderson, broyden
-from lib.jacobian import jac_loss_estimate, lipschitz_estimate, power_method
+from lib.jacobian import jac_loss_estimate, power_method
 
 from utils.adaptive_embedding import AdaptiveEmbedding
 from utils.positional_embedding import PositionalEmbedding
