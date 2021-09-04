@@ -40,10 +40,10 @@ MODEL:
       - 1
       - 1
       NUM_CHANNELS:
-      - 80
-      - 160
-      - 320
-      - 640
+      - 88
+      - 176
+      - 352
+      - 704
       FUSE_METHOD: SUM
 DEQ:
   F_SOLVER: 'broyden'
