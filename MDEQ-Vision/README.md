@@ -106,7 +106,7 @@ We provide some reasonably good pre-trained weights here so that one can quickly
 
 | Description   | Task              | Dataset             | Model                   |
 | ------------- | ----------------- | ------------------- | ----------------------- |
-| MDEQ-XL | ImageNet Classification | ImageNet | [download (.pkl)](https://drive.google.com/file/d/1MBUFBOAAI8m2eccNbHePrukpOiAzPbji/view?usp=sharing) |
+| MDEQ-XL | ImageNet Classification | ImageNet | [download (.pkl)](https://drive.google.com/file/d/1vcWnlb5yUXE-3VHiuVJdfRZVeyx0U9-W/view?usp=sharing) |
 | MDEQ-XL | Cityscapes(val) Segmentation | Cityscapes | [download (.pkl)](https://drive.google.com/file/d/1Gu7pJLGvXBbU_sPxNfjiaROJwEwak2Z8/view?usp=sharing) |
 | MDEQ-Small | ImageNet Classification | ImageNet | [download (.pkl)](https://drive.google.com/file/d/12ANsUdJJ3_qb5nfiBVPOoON2GQ2v4W1g/view?usp=sharing) |
 | MDEQ-Small (reg.) | ImageNet Classification | ImageNet | download (.pkl) |
