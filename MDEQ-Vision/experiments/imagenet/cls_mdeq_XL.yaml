@@ -1,4 +1,4 @@
-GPUS: (0,1,2,3)
+GPUS: (0,1,2,3,4,5,6,7)
 LOG_DIR: 'log/'
 DATA_DIR: ''
 OUTPUT_DIR: 'output/'
@@ -13,7 +13,7 @@ MODEL:
   DROPOUT: 0.0
   WNORM: true
   DOWNSAMPLE_TIMES: 2
-  EXPANSION_FACTOR: 5
+  EXPANSION_FACTOR: 6
   POST_GN_AFFINE: false
   IMAGE_SIZE: 
     - 224
@@ -61,7 +61,7 @@ LOSS:
 DATASET:
   DATASET: 'imagenet'
   DATA_FORMAT: 'jpg'
-  ROOT: '../../mdeq/data/imagenet'
+  ROOT: '../../data/imagenet'
   TEST_SET: 'val'
   TRAIN_SET: 'train'
 TEST:
