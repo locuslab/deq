@@ -21,7 +21,7 @@ Specifically, this repo contains the code from the following papers (see `bibtex
 
 ## Prerequisite
 
-Python >= 3.5 and PyTorch >= 1.5.0. 4 GPUs strongly recommended for computational efficiency.
+Python >= 3.6 and PyTorch >= 1.10. 4 GPUs strongly recommended for computational efficiency.
 
 ## Data
 
