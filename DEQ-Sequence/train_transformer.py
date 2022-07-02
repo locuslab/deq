@@ -21,12 +21,12 @@ from utils.exp_utils import create_exp_dir
 from utils.data_parallel import BalancedDataParallel
 from torch.utils.tensorboard import SummaryWriter
 
-
+print('IN THE PYTHON JUNGLE')
 parser = argparse.ArgumentParser(description='PyTorch DEQ Sequence Model')
 parser.add_argument('--data', type=str, default='../data/wikitext-103',
                     help='location of the data corpus (default to the WT103 path)')
 parser.add_argument('--dataset', type=str, default='wt103',
-                    choices=['wt103'],
+                    choices=['wt103', 'ptb'],
                     help='dataset name')
 parser.add_argument('--n_layer', type=int, default=12,
                     help='number of total layers')
@@ -227,6 +227,7 @@ device = torch.device('cuda' if args.cuda else 'cpu')
 ###############################################################################
 # Load data
 ###############################################################################
+print('LOADING DATA')
 corpus = get_lm_corpus(args.data, args.dataset)
 ntokens = len(corpus.vocab)
 args.n_token = ntokens
@@ -243,6 +244,7 @@ if args.adaptive:
     cutoffs = [20000, 40000, 200000]
     tie_projs += [True] * len(cutoffs)
 
+print('DATA LOADED')
 ###############################################################################
 # Build the model
 ###############################################################################
@@ -593,6 +595,7 @@ if args.eval:
 # At any point you can hit Ctrl + C to break out of training early.
 try:
     for epoch in itertools.count(start=1):
+        print('Epoch: ', epoch)
         train()
         if train_step == args.max_step:
             logging('-' * 100)

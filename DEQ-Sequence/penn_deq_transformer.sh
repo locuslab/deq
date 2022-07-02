@@ -3,11 +3,10 @@
 if [[ $1 == 'train' ]]; then
     echo 'Run training (DEQ-Transformer)...'
     python train_transformer.py \
-        --name taostWikitext103 \
+        --name taostPennTreebank \
         --cuda \
-        --data ./data/wikitext-103/ \
-        --dataset wt103 \
-        --adaptive \
+        --data ./data/penn/ \
+        --dataset ptb \
         --div_val 4 \
         --n_layer 2 \
         --eval_n_layer 24 \
